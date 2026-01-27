@@ -22,10 +22,10 @@ def get_model(device):
         ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
         nn.ReLU(),
-        nn.MaxPool2d(2), # Reduces 32x32 -> 16x16
+        nn.MaxPool2d(2), # Reduces 64x64 -> 32x32
         
-        # Layer 2: Input 32 -> Output 32 (Downsample stride=2)
-        ConvKAN(32, 32, padding=1, kernel_size=3, stride=2),
+        # Layer 2: Input 32 -> Output 32
+        ConvKAN(32, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
         nn.ReLU(),
         nn.MaxPool2d(2), # Reduces 32x32 -> 16x16
@@ -45,20 +45,20 @@ def get_cnn_model(device):
     Structure mimics the ConvKAN: 3 layers, roughly same depth.
     """
     model = nn.Sequential(
-        # Layer 1: Input 3 -> Output 32
-        nn.Conv2d(3, 32, kernel_size=3, padding=1),
+        # Layer 1: Input 3 (RGB) -> Output 32
+        nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
         nn.BatchNorm2d(32),
         nn.ReLU(),
         nn.MaxPool2d(2), # Reduces 64x64 -> 32x32
         
         # Layer 2: Input 32 -> Output 32
-        nn.Conv2d(32, 32, kernel_size=3, padding=1),
+        nn.Conv2d(32, 32, padding=1, kernel_size=3, stride=1),
         nn.BatchNorm2d(32),
         nn.ReLU(),
         nn.MaxPool2d(2), # Reduces 32x32 -> 16x16
         
         # Layer 3: Input 32 -> Output 2
-        nn.Conv2d(32, 2, kernel_size=3, padding=1),
+        nn.Conv2d(32, 2, padding=1, kernel_size=3, stride=1),
         # We don't need MaxPool here if we use AdaptiveAvgPool right after
         
         # Global Average Pooling -> Flatten
