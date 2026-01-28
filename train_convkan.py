@@ -20,13 +20,14 @@ LEARNING_RATE = 1e-3
 NUM_EPOCHS = 5
 
 # 2. DOWNLOAD & CLEAN DATASET
-if not os.path.exists(get_dataset()):
+dataset_path = get_dataset()
+if not os.path.exists(dataset_path):
     print("Dataset not found. Downloading from Kaggle...")
     cached_path = kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
-    shutil.move(cached_path, get_dataset())
-    print(f"Dataset moved to: {get_dataset()}")
+    shutil.move(cached_path, dataset_path)
+    print(f"Dataset moved to: {dataset_path}")
 
-real_root = find_data_root(get_dataset())
+real_root = find_data_root(dataset_path)
 
 # Fix: Remove the recursive garbage folder if it exists
 garbage_folder = os.path.join(real_root, "cell_images")

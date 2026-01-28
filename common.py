@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import torch.nn as nn
 from torchvision import datasets, transforms
@@ -86,8 +87,6 @@ def get_data_split(root_path):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
-    get_dataset()
-    print(root_path)
     full_dataset = datasets.ImageFolder(root=root_path, transform=transform)
     
     # LOCK THE SPLIT
@@ -103,14 +102,20 @@ def get_dataset():
     """
     Downloads the Malaria image dataset automatically. Needs a Kaggle API key to work
     """
+
+    # If path to dataset is provided in command line, use that instead
+    if len(sys.argv) == 2:
+        print(f"Using command line argument for dataset path: {sys.argv[1]}")
+        return sys.argv[1]
+
     load_dotenv()
     kaggle_API_key = os.environ.get("KAGGLE_API_KEY")
     if not kaggle_API_key:
-        print("No Kaggle API key in '.env. file, which is needed to download the dataset.")
-        SystemExit()
+        print("A '.env' file needs to have a KAGGLE_API_KEY environment variable with a valid Kaggle API key")
+        sys.exit()
 
     # If dataset already downloaded, kagglehub uses the one cached instead of downloading again
     print("Checking for dataset on system (will download if dataset not found)")
     path = kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
-    print("Dataset retrieval successful")
+    print(f"Dataset retrieval successful, dataset found at {path}")
     return path
