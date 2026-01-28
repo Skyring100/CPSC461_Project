@@ -6,7 +6,7 @@ from tqdm import tqdm
 # Import shared logic
 from common import (
     get_cnn_model, find_data_root, get_data_split, 
-    DATASET_PATH, BATCH_SIZE
+    get_dataset, BATCH_SIZE
 )
 
 # 1. SETUP
@@ -18,7 +18,7 @@ LEARNING_RATE = 1e-3
 NUM_EPOCHS = 5
 
 # 2. LOAD DATA (Exact same split as ConvKAN)
-real_root = find_data_root(DATASET_PATH)
+real_root = find_data_root(get_dataset())
 train_dataset, test_dataset = get_data_split(real_root)
 
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)

@@ -9,7 +9,7 @@ from tqdm import tqdm
 # Import shared logic
 from common import (
     get_model, find_data_root, get_data_split, 
-    DATASET_PATH, MODEL_SAVE_PATH, BATCH_SIZE
+    get_dataset, MODEL_SAVE_PATH, BATCH_SIZE
 )
 
 # 1. SETUP
@@ -20,13 +20,13 @@ LEARNING_RATE = 1e-3
 NUM_EPOCHS = 5
 
 # 2. DOWNLOAD & CLEAN DATASET
-if not os.path.exists(DATASET_PATH):
+if not os.path.exists(get_dataset()):
     print("Dataset not found. Downloading from Kaggle...")
     cached_path = kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
-    shutil.move(cached_path, DATASET_PATH)
-    print(f"Dataset moved to: {DATASET_PATH}")
+    shutil.move(cached_path, get_dataset())
+    print(f"Dataset moved to: {get_dataset()}")
 
-real_root = find_data_root(DATASET_PATH)
+real_root = find_data_root(get_dataset())
 
 # Fix: Remove the recursive garbage folder if it exists
 garbage_folder = os.path.join(real_root, "cell_images")

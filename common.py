@@ -4,11 +4,12 @@ import torch.nn as nn
 from torchvision import datasets, transforms
 from torch.utils.data import random_split
 from convkan import ConvKAN, LayerNorm2D
+import kagglehub
+from dotenv import load_dotenv
 
 # --- CONFIGURATION ---
 IMG_SIZE = 64
 BATCH_SIZE = 32
-DATASET_PATH = "malaria_dataset"
 MODEL_SAVE_PATH = "malaria_convkan.pth"
 
 # --- MODEL ARCHITECTURE ---
@@ -70,7 +71,7 @@ def get_cnn_model(device):
 # --- DATA HELPERS ---
 def find_data_root(start_path):
     """Recursively finds the folder containing the actual class subfolders."""
-    for root, dirs, files in os.walk(start_path):
+    for root, dirs, _ in os.walk(start_path):
         if "Parasitized" in dirs and "Uninfected" in dirs:
             return root
     return start_path
@@ -85,7 +86,8 @@ def get_data_split(root_path):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
-
+    get_dataset()
+    print(root_path)
     full_dataset = datasets.ImageFolder(root=root_path, transform=transform)
     
     # LOCK THE SPLIT
@@ -96,3 +98,19 @@ def get_data_split(root_path):
     
     train_set, test_set = random_split(full_dataset, [train_size, test_size])
     return train_set, test_set
+
+def get_dataset():
+    """
+    Downloads the Malaria image dataset automatically. Needs a Kaggle API key to work
+    """
+    load_dotenv()
+    kaggle_API_key = os.environ.get("KAGGLE_API_KEY")
+    if not kaggle_API_key:
+        print("No Kaggle API key in '.env. file, which is needed to download the dataset.")
+        SystemExit()
+
+    # If dataset already downloaded, kagglehub uses the one cached instead of downloading again
+    print("Checking for dataset on system (will download if dataset not found)")
+    path = kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
+    print("Dataset retrieval successful")
+    return path

@@ -1,4 +1,5 @@
 .venv
+.env
 malaria_dataset/
 
 __pycache__/
