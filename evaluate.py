@@ -6,9 +6,10 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 
 # Import shared logic
 from common import (
-    get_convkan_model, find_data_root, get_data_split, 
-    DATASET_PATH, MODEL_SAVE_PATH, BATCH_SIZE
+    get_convkan_model, find_data_root, get_data_split, get_dataset,
+    MODEL_SAVE_PATH, BATCH_SIZE
 )
+DATASET_PATH = get_dataset()
 
 # 1. SETUP
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
