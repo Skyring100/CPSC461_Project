@@ -57,7 +57,6 @@ def get_cnn_model(device):
         
         # Layer 3: Input 32 -> Output 2
         nn.Conv2d(32, 2, padding=1, kernel_size=3, stride=1),
-        # We don't need MaxPool here if we use AdaptiveAvgPool right after
         
         nn.Flatten()
     ).to(device)
