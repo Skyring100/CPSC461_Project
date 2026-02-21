@@ -32,9 +32,7 @@ def get_convkan_model(device):
         
         # Layer 3: Input 32 -> Output 2 (Classes)
         ConvKAN(32, 2, padding=1, kernel_size=3, stride=2),
-        
-        # Global Average Pooling -> Flatten
-        nn.AdaptiveAvgPool2d(1),
+
         nn.Flatten()
     ).to(device)
     return model
@@ -61,8 +59,6 @@ def get_cnn_model(device):
         nn.Conv2d(32, 2, padding=1, kernel_size=3, stride=1),
         # We don't need MaxPool here if we use AdaptiveAvgPool right after
         
-        # Global Average Pooling -> Flatten
-        nn.AdaptiveAvgPool2d(1),
         nn.Flatten()
     ).to(device)
     return model
