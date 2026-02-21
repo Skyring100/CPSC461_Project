@@ -14,7 +14,7 @@ BATCH_SIZE = 32
 MODEL_SAVE_PATH = "malaria_convkan.pth"
 
 # --- MODEL ARCHITECTURE ---
-def get_model(device):
+def get_convkan_model(device):
     """
     Returns the compiled ConvKAN model.
     Using a function ensures main.py and evaluate.py match exactly.
@@ -23,13 +23,11 @@ def get_model(device):
         # Layer 1: Input 3 (RGB) -> Output 32
         ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
-        nn.ReLU(),
         nn.MaxPool2d(2), # Reduces 64x64 -> 32x32
         
         # Layer 2: Input 32 -> Output 32
         ConvKAN(32, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
-        nn.ReLU(),
         nn.MaxPool2d(2), # Reduces 32x32 -> 16x16
         
         # Layer 3: Input 32 -> Output 2 (Classes)

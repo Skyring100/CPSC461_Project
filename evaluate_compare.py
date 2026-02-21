@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 
 from common import (
-    get_model, get_cnn_model, find_data_root, get_data_split, 
+    get_convkan_model, get_cnn_model, find_data_root, get_data_split, 
     DATASET_PATH, MODEL_SAVE_PATH, BATCH_SIZE
 )
 
@@ -20,7 +20,7 @@ classes = test_dataset.dataset.classes
 
 # 2. LOAD MODELS
 print("Loading ConvKAN...")
-kan_model = get_model(device)
+kan_model = get_convkan_model(device)
 kan_model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=device))
 kan_model.eval()
 

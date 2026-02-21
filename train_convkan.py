@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # Import shared logic
 from common import (
-    get_model, find_data_root, get_data_split, 
+    get_convkan_model, find_data_root, get_data_split, 
     get_dataset, MODEL_SAVE_PATH, BATCH_SIZE
 )
 
@@ -46,7 +46,7 @@ print(f"Training images: {len(train_dataset)}")
 print(f"Validation images: {len(test_dataset)}")
 
 # 4. INIT MODEL
-model = get_model(device)
+model = get_convkan_model(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 

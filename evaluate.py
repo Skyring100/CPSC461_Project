@@ -6,7 +6,7 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 
 # Import shared logic
 from common import (
-    get_model, find_data_root, get_data_split, 
+    get_convkan_model, find_data_root, get_data_split, 
     DATASET_PATH, MODEL_SAVE_PATH, BATCH_SIZE
 )
 
@@ -31,7 +31,7 @@ classes = test_dataset.dataset.classes # Access underlying classes from subset
 print(f"Evaluating on {len(test_dataset)} unseen test images.")
 
 # 3. LOAD MODEL
-model = get_model(device)
+model = get_convkan_model(device)
 model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=device))
 model.eval()
 
