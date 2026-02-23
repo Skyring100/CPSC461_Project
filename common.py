@@ -72,9 +72,11 @@ def find_data_root(start_path):
 
 def get_data_split(root_path):
     """
-    Loads data and returns (train_set, test_set).
+    Loads data and returns (train_set, test_set). Also preprocesses the data to resize images
     CRITICAL: Uses torch.manual_seed(42) so the split is identical every time.
     """
+
+    # Data preprocessing
     transform = transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),

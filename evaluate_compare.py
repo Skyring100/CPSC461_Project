@@ -9,7 +9,8 @@ from common import (
     DATASET_PATH, MODEL_SAVE_PATH, BATCH_SIZE
 )
 
-CNN_SAVE_PATH = "malaria_cnn.pth"
+CNN_SAVE_PATH = 'malaria_cnn.pth'
+CONVKAN_SAVE_PATH = 'malaria_convkan.pth'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 1. LOAD DATA
@@ -21,8 +22,12 @@ classes = test_dataset.dataset.classes
 # 2. LOAD MODELS
 print("Loading ConvKAN...")
 kan_model = get_convkan_model(device)
-kan_model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=device))
-kan_model.eval()
+if os.path.exists(CONVKAN_SAVE_PATH):
+    kan_model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=device))
+    kan_model.eval()
+else:
+    print("Warning: ConvKAN learned functions not found! Run train_cnn.py first.")
+    exit()
 
 print("Loading CNN...")
 cnn_model = get_cnn_model(device)
@@ -30,7 +35,7 @@ if os.path.exists(CNN_SAVE_PATH):
     cnn_model.load_state_dict(torch.load(CNN_SAVE_PATH, map_location=device))
     cnn_model.eval()
 else:
-    print("Warning: CNN weights not found! Run train_cnn.py first.")
+    print("Warning: CNN learned weights not found! Run train_cnn.py first.")
     exit()
 
 # 3. RUN BATTLE
