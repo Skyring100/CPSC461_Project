@@ -14,26 +14,40 @@ BATCH_SIZE = 32
 MODEL_SAVE_PATH = "malaria_convkan.pth"
 
 # --- MODEL ARCHITECTURE ---
+# Using https://www.nature.com/articles/s41598-025-87979-5 for layer composition reference. They use CNNs for Malaria detection
 def get_convkan_model(device):
     """
     Returns the compiled ConvKAN model.
     Using a function ensures main.py and evaluate.py match exactly.
     """
     model = nn.Sequential(
-        # Layer 1: Input 3 (RGB) -> Output 32
-        ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
-        LayerNorm2D(32),
-        nn.MaxPool2d(2), # Reduces 64x64 -> 32x32
-        
-        # Layer 2: Input 32 -> Output 32
+        ConvKAN(7, 32, padding=1, kernel_size=3, stride=1),
+
         ConvKAN(32, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
-        nn.MaxPool2d(2), # Reduces 32x32 -> 16x16
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2), 
         
-        # Layer 3: Input 32 -> Output 2 (Classes)
-        ConvKAN(32, 2, padding=1, kernel_size=3, stride=2),
+        ConvKAN(32, 64, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(64),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),
+        
+        ConvKAN(64, 128, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(128),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),
 
-        nn.Flatten()
+        ConvKAN(128, 256, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(256),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),       
+
+        nn.Flatten(),
+        # Linear is equivalent to dense layer
+        nn.Linear(9216, 256),
+        nn.LeakyReLU(),
+        nn.Linear(256,3)
     ).to(device)
     return model
 
@@ -43,22 +57,33 @@ def get_cnn_model(device):
     Structure mimics the ConvKAN: 3 layers, roughly same depth.
     """
     model = nn.Sequential(
-        # Layer 1: Input 3 (RGB) -> Output 32
-        nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
-        nn.BatchNorm2d(32),
-        nn.ReLU(),
-        nn.MaxPool2d(2), # Reduces 64x64 -> 32x32
-        
-        # Layer 2: Input 32 -> Output 32
+        nn.Conv2d(7, 32, padding=1, kernel_size=3, stride=1),
+
         nn.Conv2d(32, 32, padding=1, kernel_size=3, stride=1),
         nn.BatchNorm2d(32),
-        nn.ReLU(),
-        nn.MaxPool2d(2), # Reduces 32x32 -> 16x16
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2), 
         
-        # Layer 3: Input 32 -> Output 2
-        nn.Conv2d(32, 2, padding=1, kernel_size=3, stride=1),
+        nn.Conv2d(32, 64, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(64),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),
         
-        nn.Flatten()
+        nn.Conv2d(64, 128, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),
+
+        nn.Conv2d(128, 256, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(256),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),       
+
+        nn.Flatten(),
+        # Linear is equivalent to dense layer
+        nn.Linear(9216, 256),
+        nn.LeakyReLU(),
+        nn.Linear(256,3)
     ).to(device)
     return model
 
