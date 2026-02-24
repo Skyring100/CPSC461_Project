@@ -21,26 +21,22 @@ def get_convkan_model(device):
     Using a function ensures main.py and evaluate.py match exactly.
     """
     model = nn.Sequential(
-        ConvKAN(7, 32, padding=1, kernel_size=3, stride=1),
+        nn.Linear(7, 32),
 
         ConvKAN(32, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
-        nn.LeakyReLU(),
         nn.MaxPool2d(2), 
         
         ConvKAN(32, 64, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(64),
-        nn.LeakyReLU(),
         nn.MaxPool2d(2),
         
         ConvKAN(64, 128, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(128),
-        nn.LeakyReLU(),
         nn.MaxPool2d(2),
 
         ConvKAN(128, 256, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(256),
-        nn.LeakyReLU(),
         nn.MaxPool2d(2),       
 
         nn.Flatten(),
@@ -57,7 +53,7 @@ def get_cnn_model(device):
     Structure mimics the ConvKAN: 3 layers, roughly same depth.
     """
     model = nn.Sequential(
-        nn.Conv2d(7, 32, padding=1, kernel_size=3, stride=1),
+        nn.Linear(7, 32),
 
         nn.Conv2d(32, 32, padding=1, kernel_size=3, stride=1),
         nn.BatchNorm2d(32),
