@@ -9,7 +9,7 @@ import kagglehub
 from dotenv import load_dotenv
 
 # --- CONFIGURATION ---
-IMG_SIZE = 64
+IMG_SIZE = 100
 BATCH_SIZE = 32
 MODEL_SAVE_PATH = "malaria_convkan.pth"
 
@@ -21,9 +21,7 @@ def get_convkan_model(device):
     Using a function ensures main.py and evaluate.py match exactly.
     """
     model = nn.Sequential(
-        nn.Linear(7, 32),
-
-        ConvKAN(32, 32, padding=1, kernel_size=3, stride=1),
+        ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
         LayerNorm2D(32),
         nn.MaxPool2d(2), 
         
@@ -53,9 +51,7 @@ def get_cnn_model(device):
     Structure mimics the ConvKAN: 3 layers, roughly same depth.
     """
     model = nn.Sequential(
-        nn.Linear(7, 32),
-
-        nn.Conv2d(32, 32, padding=1, kernel_size=3, stride=1),
+        nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
         nn.BatchNorm2d(32),
         nn.LeakyReLU(),
         nn.MaxPool2d(2), 
