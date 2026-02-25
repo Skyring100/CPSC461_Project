@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 # --- CONFIGURATION ---
 IMG_SIZE = 100
 BATCH_SIZE = 32
-MODEL_SAVE_PATH = "malaria_convkan.pth"
-
+CONVKAN_SAVE_PATH = "malaria_convkan.pth" 
+CNN_SAVE_PATH = "malaria_cnn.pth"  
 # --- MODEL ARCHITECTURE ---
 # Using https://www.nature.com/articles/s41598-025-87979-5 for layer composition reference. They use CNNs for Malaria detection
 def get_convkan_model(device):
@@ -41,7 +41,7 @@ def get_convkan_model(device):
         # Linear is equivalent to dense layer
         nn.Linear(9216, 256),
         nn.LeakyReLU(),
-        nn.Linear(256,3)
+        nn.Linear(256,2)
     ).to(device)
     return model
 
@@ -75,7 +75,7 @@ def get_cnn_model(device):
         # Linear is equivalent to dense layer
         nn.Linear(9216, 256),
         nn.LeakyReLU(),
-        nn.Linear(256,3)
+        nn.Linear(256,2)
     ).to(device)
     return model
 

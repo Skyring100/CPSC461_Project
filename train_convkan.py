@@ -9,7 +9,7 @@ from tqdm import tqdm
 # Import shared logic
 from common import (
     get_convkan_model, find_data_root, get_data_split, 
-    get_dataset, MODEL_SAVE_PATH, BATCH_SIZE
+    get_dataset, CONVKAN_SAVE_PATH, BATCH_SIZE 
 )
 
 # 1. SETUP
@@ -86,5 +86,6 @@ for epoch in range(NUM_EPOCHS):
     print(f"Epoch {epoch+1} Results | Loss: {running_loss/len(train_loader):.4f} | Val Acc: {acc:.2f}%")
 
 # 6. SAVE
-torch.save(model.state_dict(), MODEL_SAVE_PATH)
-print(f"\nModel saved to {MODEL_SAVE_PATH}")
+# Updated to use the explicit CONVKAN_SAVE_PATH constant
+torch.save(model.state_dict(), CONVKAN_SAVE_PATH)
+print(f"\nModel saved to {CONVKAN_SAVE_PATH}")

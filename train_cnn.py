@@ -6,14 +6,14 @@ from tqdm import tqdm
 # Import shared logic
 from common import (
     get_cnn_model, find_data_root, get_data_split, 
-    get_dataset, BATCH_SIZE
+    get_dataset, BATCH_SIZE, CNN_SAVE_PATH  # Added CNN_SAVE_PATH import
 )
 
 # 1. SETUP
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Training CNN Baseline on: {device}")
 
-CNN_SAVE_PATH = "malaria_cnn.pth"
+# Removed local CNN_SAVE_PATH definition to use the one from common.py
 LEARNING_RATE = 1e-3
 NUM_EPOCHS = 5
 
@@ -65,5 +65,6 @@ for epoch in range(NUM_EPOCHS):
     print(f"Epoch {epoch+1} Results | Val Acc: {acc:.2f}%")
 
 # 5. SAVE
+# Now explicitly using CNN_SAVE_PATH from common.py
 torch.save(model.state_dict(), CNN_SAVE_PATH)
 print(f"\nCNN Model saved to {CNN_SAVE_PATH}")

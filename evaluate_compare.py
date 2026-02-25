@@ -4,18 +4,19 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 
+# Import shared logic from your updated common.py
 from common import (
     get_convkan_model, get_cnn_model, find_data_root, get_data_split, 
-    DATASET_PATH, MODEL_SAVE_PATH, BATCH_SIZE
+    get_dataset, CONVKAN_SAVE_PATH, CNN_SAVE_PATH, BATCH_SIZE
 )
 
-CNN_SAVE_PATH = 'malaria_cnn.pth'
-CONVKAN_SAVE_PATH = 'malaria_convkan.pth'
+# 1. SETUP & DATA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dataset_path = get_dataset()
+real_root = find_data_root(dataset_path)
 
-# 1. LOAD DATA
-real_root = find_data_root(DATASET_PATH)
-_, test_dataset = get_data_split(real_root) # Test set only
+# Load test set only (discarding train_set)
+_, test_dataset = get_data_split(real_root) 
 loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 classes = test_dataset.dataset.classes
 
@@ -23,10 +24,11 @@ classes = test_dataset.dataset.classes
 print("Loading ConvKAN...")
 kan_model = get_convkan_model(device)
 if os.path.exists(CONVKAN_SAVE_PATH):
-    kan_model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=device))
+    # FIXED: Was previously loading MODEL_SAVE_PATH instead of CONVKAN_SAVE_PATH
+    kan_model.load_state_dict(torch.load(CONVKAN_SAVE_PATH, map_location=device))
     kan_model.eval()
 else:
-    print("Warning: ConvKAN learned functions not found! Run train_cnn.py first.")
+    print(f"Warning: {CONVKAN_SAVE_PATH} not found! Run train_convkan.py first.")
     exit()
 
 print("Loading CNN...")
@@ -35,7 +37,7 @@ if os.path.exists(CNN_SAVE_PATH):
     cnn_model.load_state_dict(torch.load(CNN_SAVE_PATH, map_location=device))
     cnn_model.eval()
 else:
-    print("Warning: CNN learned weights not found! Run train_cnn.py first.")
+    print(f"Warning: {CNN_SAVE_PATH} not found! Run train_cnn.py first.")
     exit()
 
 # 3. RUN BATTLE
@@ -47,15 +49,18 @@ print(f"\nComparing models on {len(test_dataset)} images...")
 
 with torch.no_grad():
     for x, y in loader:
-        x = x.to(device)
+        x, y = x.to(device), y.to(device)
+        
+        # ConvKAN Inference
+        outputs_k = kan_model(x)
+        _, k_pred = torch.max(outputs_k, 1)
+        
+        # CNN Inference
+        outputs_c = cnn_model(x)
+        _, c_pred = torch.max(outputs_c, 1)
+
         y_true.extend(y.cpu().numpy())
-        
-        # ConvKAN
-        _, k_pred = torch.max(kan_model(x), 1)
         kan_preds.extend(k_pred.cpu().numpy())
-        
-        # CNN
-        _, c_pred = torch.max(cnn_model(x), 1)
         cnn_preds.extend(c_pred.cpu().numpy())
 
 # 4. TEXT RESULTS
@@ -78,6 +83,9 @@ else:
 print("\nPlotting Confusion Matrices...")
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Since common.py is now set to 2 output classes, 
+# these will naturally result in 2x2 matrices matching your 'classes' list.
 
 # Plot ConvKAN
 cm_kan = confusion_matrix(y_true, kan_preds)
