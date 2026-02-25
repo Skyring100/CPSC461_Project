@@ -6,10 +6,9 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 
 # Import shared logic
 from common import (
-    get_convkan_model, find_data_root, get_data_split, get_dataset,
+    get_convkan_model, get_data_split, prepare_dataset_root,
     CONVKAN_SAVE_PATH, BATCH_SIZE # Updated to use CONVKAN_SAVE_PATH
 )
-DATASET_PATH = get_dataset()
 
 # 1. SETUP
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -21,7 +20,7 @@ if not os.path.exists(CONVKAN_SAVE_PATH):
     exit()
 
 # 2. LOAD DATA (TEST ONLY)
-real_root = find_data_root(DATASET_PATH)
+real_root = prepare_dataset_root()
 
 # We discard the first return (train_dataset) and keep only test_dataset
 _, test_dataset = get_data_split(real_root)

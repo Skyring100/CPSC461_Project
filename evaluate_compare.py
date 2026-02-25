@@ -6,14 +6,13 @@ from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDis
 
 # Import shared logic from your updated common.py
 from common import (
-    get_convkan_model, get_cnn_model, find_data_root, get_data_split, 
-    get_dataset, CONVKAN_SAVE_PATH, CNN_SAVE_PATH, BATCH_SIZE
+    get_convkan_model, get_cnn_model, get_data_split,
+    prepare_dataset_root, CONVKAN_SAVE_PATH, CNN_SAVE_PATH, BATCH_SIZE
 )
 
 # 1. SETUP & DATA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dataset_path = get_dataset()
-real_root = find_data_root(dataset_path)
+real_root = prepare_dataset_root()
 
 # Load test set only (discarding train_set)
 _, test_dataset = get_data_split(real_root) 

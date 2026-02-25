@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import torch
 import torch.nn as nn
@@ -131,3 +132,24 @@ def get_dataset():
     path = kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
     print(f"Dataset retrieval successful, dataset found at {path}")
     return path
+
+def clean_dataset_root(data_root):
+    """
+    Removes known nested garbage folders from the dataset tree.
+    """
+    garbage_folder = os.path.join(data_root, "cell_images")
+    if os.path.isdir(garbage_folder):
+        print(f"Removing garbage folder: {garbage_folder}")
+        shutil.rmtree(garbage_folder)
+
+def prepare_dataset_root(dataset_path=None):
+    """
+    Gets dataset path, resolves the real image root, and cleans known garbage folders.
+    Returns the cleaned root directory to use for ImageFolder.
+    """
+    if dataset_path is None:
+        dataset_path = get_dataset()
+
+    real_root = find_data_root(dataset_path)
+    clean_dataset_root(real_root)
+    return real_root

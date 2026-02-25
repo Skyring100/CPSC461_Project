@@ -1,6 +1,4 @@
 import os
-import shutil
-import kagglehub
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -8,8 +6,8 @@ from tqdm import tqdm
 
 # Import shared logic
 from common import (
-    get_convkan_model, find_data_root, get_data_split, 
-    get_dataset, CONVKAN_SAVE_PATH, BATCH_SIZE 
+    get_convkan_model, get_data_split,
+    prepare_dataset_root, CONVKAN_SAVE_PATH, BATCH_SIZE
 )
 
 # 1. SETUP
@@ -20,20 +18,7 @@ LEARNING_RATE = 1e-3
 NUM_EPOCHS = 5
 
 # 2. DOWNLOAD & CLEAN DATASET
-dataset_path = get_dataset()
-if not os.path.exists(dataset_path):
-    print("Dataset not found. Downloading from Kaggle...")
-    cached_path = kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
-    shutil.move(cached_path, dataset_path)
-    print(f"Dataset moved to: {dataset_path}")
-
-real_root = find_data_root(dataset_path)
-
-# Fix: Remove the recursive garbage folder if it exists
-garbage_folder = os.path.join(real_root, "cell_images")
-if os.path.exists(garbage_folder):
-    print(f"Removing garbage folder: {garbage_folder}")
-    shutil.rmtree(garbage_folder)
+real_root = prepare_dataset_root()
 
 # 3. LOAD DATA (SEED SECURED)
 print(f"Loading data from: {real_root}")

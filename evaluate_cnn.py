@@ -6,7 +6,7 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 
 # Import shared logic from common.py
 from common import (
-    get_cnn_model, find_data_root, get_data_split, get_dataset,
+    get_cnn_model, get_data_split, prepare_dataset_root,
     CNN_SAVE_PATH, BATCH_SIZE
 )
 
@@ -20,8 +20,7 @@ if not os.path.exists(CNN_SAVE_PATH):
     exit()
 
 # 2. LOAD DATA
-dataset_path = get_dataset()
-real_root = find_data_root(dataset_path)
+real_root = prepare_dataset_root()
 
 # Discard train_dataset, keep test_dataset
 _, test_dataset = get_data_split(real_root)
