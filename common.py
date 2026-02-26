@@ -13,7 +13,15 @@ from dotenv import load_dotenv
 IMG_SIZE = 100
 BATCH_SIZE = 32
 CONVKAN_SAVE_PATH = "malaria_convkan.pth" 
-CNN_SAVE_PATH = "malaria_cnn.pth"  
+CNN_SAVE_PATH = "malaria_cnn.pth"
+
+# Experiment path templates (use format_experiment_path() to create)
+CONVKAN_EXPERIMENT_TEMPLATE = "malaria_convkan_{pct}pct.pth"
+CNN_EXPERIMENT_TEMPLATE = "malaria_cnn_{pct}pct.pth"
+
+def format_experiment_path(template, percentage):
+    """Formats an experiment path with the given percentage (10, 20, ..., 90)."""
+    return template.format(pct=int(percentage * 100))  
 # --- MODEL ARCHITECTURE ---
 # Using https://www.nature.com/articles/s41598-025-87979-5 for layer composition reference. They use CNNs for Malaria detection
 def get_convkan_model(device):
@@ -88,12 +96,16 @@ def find_data_root(start_path):
             return root
     return start_path
 
-def get_data_split(root_path):
+def get_data_split(root_path, percentage=1.0):
     """
-    Loads data and returns (train_set, test_set). Also preprocesses the data to resize images
-    CRITICAL: Uses torch.manual_seed(42) so the split is identical every time.
+    Loads data for experiments with variable training set sizes.
+    - percentage: fraction of the training pool (90% of data) to use (0.1 to 1.0)
+    - Returns: (train_set, val_set) with 80-20 split of the selected percentage
+    
+    CRITICAL: Uses torch.manual_seed(42) so the splits are identical every time.
+    The first 10% is reserved for final testing and is NOT returned by this function.
     """
-
+    
     # Data preprocessing
     transform = transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
@@ -105,11 +117,54 @@ def get_data_split(root_path):
     # LOCK THE SPLIT
     torch.manual_seed(42)
     
-    train_size = int(0.8 * len(full_dataset))
-    test_size = len(full_dataset) - train_size
+    # First, split off 10% for final testing (never returned by this function)
+    total_size = len(full_dataset)
+    final_test_size = int(0.1 * total_size)
+    trainable_size = total_size - final_test_size
     
-    train_set, test_set = random_split(full_dataset, [train_size, test_size])
-    return train_set, test_set
+    # Split into trainable pool (90%) and held-out test set (10%)
+    trainable_set, _ = random_split(full_dataset, [trainable_size, final_test_size])
+    
+    # Now split the trainable pool based on the requested percentage
+    experiment_size = int(percentage * trainable_size)
+    if experiment_size < trainable_size:
+        experiment_set, _ = random_split(trainable_set, [experiment_size, trainable_size - experiment_size])
+    else:
+        experiment_set = trainable_set
+    
+    # Split experiment data into 80% train and 20% validation
+    train_size = int(0.8 * len(experiment_set))
+    val_size = len(experiment_set) - train_size
+    
+    train_set, val_set = random_split(experiment_set, [train_size, val_size])
+    return train_set, val_set
+
+
+def get_test_set(root_path):
+    """
+    Returns the held-out 10% test set for final evaluation.
+    This set is NOT used during any training, only for final comparison.
+    CRITICAL: Uses torch.manual_seed(42) so this matches the split in get_data_split().
+    """
+    
+    # Data preprocessing (must match get_data_split)
+    transform = transforms.Compose([
+        transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    full_dataset = datasets.ImageFolder(root=root_path, transform=transform)
+    
+    # LOCK THE SPLIT (must match get_data_split)
+    torch.manual_seed(42)
+    
+    total_size = len(full_dataset)
+    final_test_size = int(0.1 * total_size)
+    trainable_size = total_size - final_test_size
+    
+    # Get the test set (last 10%)
+    _, test_set = random_split(full_dataset, [trainable_size, final_test_size])
+    return test_set
 
 def get_dataset():
     """
