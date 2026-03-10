@@ -103,7 +103,6 @@ def get_convkan_model(device, version=""):
                 ConvKAN(3, 32, kernel_size=3, stride=1),
                 # Output = 32 x 28 x 28
                 LayerNorm2D(32),
-                nn.ReLU(),
                 nn.MaxPool2d(2),
                 # Output = 32 x 14 x 14
 
@@ -111,7 +110,6 @@ def get_convkan_model(device, version=""):
                 ConvKAN(32, 64, kernel_size=3, stride=1),
                 # Output = 64 x 12 x 12
                 LayerNorm2D(64),
-                nn.ReLU(),
                 nn.MaxPool2d(2),
                 # Output = 64 x 6 x 6
                 
@@ -122,7 +120,7 @@ def get_convkan_model(device, version=""):
             ).to(device)
     return model
 
-def get_cnn_model(device,version=""):
+def get_cnn_model(device, version=""):
     """
     A Standard CNN Baseline.
     Structure mimics the ConvKAN: 3 layers, roughly same depth.
@@ -180,7 +178,39 @@ def get_cnn_model(device,version=""):
         ).to(device)
     return model
 
-def add_convolutional_layer(model : nn.Sequential, isConvKAN : bool, inChannel, outChannel, kernel_size, stride, padding=0):
+def get_model(device, isConvKAN : bool, version=""):
+    model = nn.Sequential()
+    if version == "":
+        add_convolutional_layer(model, isConvKAN, 3, 32, 3, 1, 1)
+        if not isConvKAN:
+            model.append(nn.LeakyReLU())
+        model.append(nn.MaxPool2d(2)) 
+        
+        add_convolutional_layer(model, isConvKAN, 32, 64, 3, 1, 1)
+        if not isConvKAN:
+            model.append(nn.LeakyReLU())
+        model.append(nn.MaxPool2d(2)) 
+        
+        add_convolutional_layer(model, isConvKAN, 64, 128, 3, 1, 1)
+        if not isConvKAN:
+            model.append(nn.LeakyReLU())
+        model.append(nn.MaxPool2d(2)) 
+
+
+        add_convolutional_layer(model, isConvKAN, 128, 256, 3, 1, 1)
+        if not isConvKAN:
+            model.append(nn.LeakyReLU())
+        model.append(nn.MaxPool2d(2))     
+
+        nn.Flatten(),
+        # Linear is equivalent to dense layer
+        nn.Linear(9216, 256),
+        nn.LeakyReLU(),
+        nn.Linear(256,2)
+    
+    return model.to(device)
+
+def add_convolutional_layer(model : nn.Sequential, isConvKAN : bool, inChannel, outChannel, kernel_size, stride, padding):
     if isConvKAN:
         model.append(ConvKAN(inChannel, outChannel, kernel_size=kernel_size, stride=stride, padding=padding))
         model.append(LayerNorm2D(outChannel))
