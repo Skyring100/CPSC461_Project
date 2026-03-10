@@ -65,70 +65,128 @@ def format_experiment_path(template, percentage):
     """Formats an experiment path with the given percentage (10, 20, ..., 90)."""
     return template.format(pct=int(percentage * 100))  
 # --- MODEL ARCHITECTURE ---
+# To calculate convolutional output layer height/width: (floor(last_size + 2x(Padding) - Kernel_size)/Stride)+1
+# For simplicity, if padding=0 and stride=1, then we have: last_size - kernel_size + 1
 # Using https://www.nature.com/articles/s41598-025-87979-5 for layer composition reference. They use CNNs for Malaria detection
-def get_convkan_model(device):
+def get_convkan_model(device, version=""):
     """
     Returns the compiled ConvKAN model.
     Using a function ensures main.py and evaluate.py match exactly.
     """
-    model = nn.Sequential(
-        ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
-        LayerNorm2D(32),
-        nn.MaxPool2d(2), 
-        
-        ConvKAN(32, 64, padding=1, kernel_size=3, stride=1),
-        LayerNorm2D(64),
-        nn.MaxPool2d(2),
-        
-        ConvKAN(64, 128, padding=1, kernel_size=3, stride=1),
-        LayerNorm2D(128),
-        nn.MaxPool2d(2),
+    if version == "":
+        model = nn.Sequential(
+            ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
+            LayerNorm2D(32),
+            nn.MaxPool2d(2), 
+            
+            ConvKAN(32, 64, padding=1, kernel_size=3, stride=1),
+            LayerNorm2D(64),
+            nn.MaxPool2d(2),
+            
+            ConvKAN(64, 128, padding=1, kernel_size=3, stride=1),
+            LayerNorm2D(128),
+            nn.MaxPool2d(2),
 
-        ConvKAN(128, 256, padding=1, kernel_size=3, stride=1),
-        LayerNorm2D(256),
-        nn.MaxPool2d(2),       
+            ConvKAN(128, 256, padding=1, kernel_size=3, stride=1),
+            LayerNorm2D(256),
+            nn.MaxPool2d(2),       
 
-        nn.Flatten(),
-        # Linear is equivalent to dense layer
-        nn.Linear(9216, 256),
-        nn.LeakyReLU(),
-        nn.Linear(256,2)
-    ).to(device)
+            nn.Flatten(),
+            # Linear is equivalent to dense layer
+            nn.Linear(9216, 256),
+            nn.LeakyReLU(),
+            nn.Linear(256,2)
+        ).to(device)
+    elif version == "simple":
+            model = nn.Sequential(
+                # Input = 3 x 30 x 30
+                ConvKAN(3, 32, kernel_size=3, stride=1),
+                # Output = 32 x 28 x 28
+                LayerNorm2D(32),
+                nn.ReLU(),
+                nn.MaxPool2d(2),
+                # Output = 32 x 14 x 14
+
+
+                ConvKAN(32, 64, kernel_size=3, stride=1),
+                # Output = 64 x 12 x 12
+                LayerNorm2D(64),
+                nn.ReLU(),
+                nn.MaxPool2d(2),
+                # Output = 64 x 6 x 6
+                
+
+                nn.Flatten(),
+                # Linear is equivalent to dense layer
+                nn.Linear(2304, 2),
+            ).to(device)
     return model
 
-def get_cnn_model(device):
+def get_cnn_model(device,version=""):
     """
     A Standard CNN Baseline.
     Structure mimics the ConvKAN: 3 layers, roughly same depth.
     """
-    model = nn.Sequential(
-        nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2), 
-        
-        nn.Conv2d(32, 64, padding=1, kernel_size=3, stride=1),
-        nn.BatchNorm2d(64),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2),
-        
-        nn.Conv2d(64, 128, padding=1, kernel_size=3, stride=1),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2),
+    if version == "":
+        model = nn.Sequential(
+            nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(2), 
+            
+            nn.Conv2d(32, 64, padding=1, kernel_size=3, stride=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(2),
+            
+            nn.Conv2d(64, 128, padding=1, kernel_size=3, stride=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(2),
 
-        nn.Conv2d(128, 256, padding=1, kernel_size=3, stride=1),
-        nn.BatchNorm2d(256),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2),       
+            nn.Conv2d(128, 256, padding=1, kernel_size=3, stride=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(2),       
 
-        nn.Flatten(),
-        # Linear is equivalent to dense layer
-        nn.Linear(9216, 256),
-        nn.LeakyReLU(),
-        nn.Linear(256,2)
-    ).to(device)
+            nn.Flatten(),
+            # Linear is equivalent to dense layer
+            nn.Linear(9216, 256),
+            nn.LeakyReLU(),
+            nn.Linear(256,2)
+        ).to(device)
+    elif version == "simple":
+        model = nn.Sequential(
+            # Input = 3 x 30 x 30
+            nn.Conv2d(3, 32, kernel_size=3, stride=1),
+            # Output = 32 x 28 x 28
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            # Output = 32 x 14 x 14
+
+
+            nn.Conv2d(32, 64, kernel_size=3, stride=1),
+            # Output = 64 x 12 x 12
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            # Output = 64 x 6 x 6
+               
+
+            nn.Flatten(),
+            # Linear is equivalent to dense layer
+            nn.Linear(2304, 2),
+        ).to(device)
     return model
+
+def add_convolutional_layer(model : nn.Sequential, isConvKAN : bool, inChannel, outChannel, kernel_size, stride, padding=0):
+    if isConvKAN:
+        model.append(ConvKAN(inChannel, outChannel, kernel_size=kernel_size, stride=stride, padding=padding))
+        model.append(LayerNorm2D(outChannel))
+    else:
+        model.append(nn.Conv2d(inChannel, outChannel, kernel_size=kernel_size, stride=stride, padding=padding))
+        model.append(nn.BatchNorm2d(outChannel))
 
 # --- DATA HELPERS ---
 def find_data_root(start_path):
