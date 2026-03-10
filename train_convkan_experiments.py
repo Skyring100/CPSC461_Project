@@ -84,4 +84,5 @@ for experiment_num, percentage in enumerate(PERCENTAGES, 1):
 
 print(f"\n{'='*60}")
 print("All ConvKAN experiments completed!")
+
 print(f"{'='*60}")

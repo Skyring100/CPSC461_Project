@@ -9,6 +9,44 @@ from convkan import ConvKAN, LayerNorm2D
 import kagglehub
 from dotenv import load_dotenv
 
+# Custom dataset wrapper for on-the-fly augmentation
+class AugmentedDataset(torch.utils.data.Dataset):
+    """Wrapper that applies transform on-the-fly to a subset."""
+    def __init__(self, subset, transform):
+        self.subset = subset
+        self.transform = transform
+        # Get the base dataset to access raw images
+        base_dataset = subset
+        while hasattr(base_dataset, 'dataset'):
+            base_dataset = base_dataset.dataset
+        self.base_dataset = base_dataset
+        
+    def __len__(self):
+        return len(self.subset)
+    
+    def __getitem__(self, idx):
+        # Get the actual index and label from the subset
+        actual_idx = self.subset.indices[idx] if hasattr(self.subset, 'indices') else idx
+        
+        # Navigate through nested subsets to get to the actual data
+        current = self.subset.dataset
+        current_idx = actual_idx
+        while hasattr(current, 'dataset'):
+            if hasattr(current, 'indices'):
+                current_idx = current.indices[current_idx]
+            current = current.dataset
+        
+        # Get raw image path and label from ImageFolder
+        img_path, label = current.samples[current_idx]
+        from PIL import Image
+        img = Image.open(img_path).convert('RGB')
+        
+        # Apply transform
+        if self.transform:
+            img = self.transform(img)
+        
+        return img, label
+
 # --- CONFIGURATION ---
 IMG_SIZE = 100
 BATCH_SIZE = 32
@@ -18,6 +56,10 @@ CNN_SAVE_PATH = "malaria_cnn.pth"
 # Experiment path templates (use format_experiment_path() to create)
 CONVKAN_EXPERIMENT_TEMPLATE = "malaria_convkan_{pct}pct.pth"
 CNN_EXPERIMENT_TEMPLATE = "malaria_cnn_{pct}pct.pth"
+
+# Overfitting experiment paths
+CONVKAN_OVERFITTING_PATH = "malaria_convkan_overfitting.pth"
+CNN_OVERFITTING_PATH = "malaria_cnn_overfitting.pth"
 
 def format_experiment_path(template, percentage):
     """Formats an experiment path with the given percentage (10, 20, ..., 90)."""
@@ -165,6 +207,79 @@ def get_test_set(root_path):
     # Get the test set (last 10%)
     _, test_set = random_split(full_dataset, [trainable_size, final_test_size])
     return test_set
+
+
+def get_small_fixed_dataset(root_path, samples_per_class=20):
+    """
+    Returns a small fixed dataset with a specific number of samples per class.
+    Used for overfitting experiments to train on limited data.
+    Applies data augmentation to training set to help models learn with limited data.
+    
+    Returns: (train_set, val_set) with 80-20 split of the small dataset
+    CRITICAL: Uses torch.manual_seed(42) for reproducibility
+    """
+    
+    # Data preprocessing WITHOUT augmentation (for validation)
+    basic_transform = transforms.Compose([
+        transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    
+    # Data augmentation for training (applied on-the-fly)
+    augmentation_transform = transforms.Compose([
+        transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
+        transforms.RandomRotation(20),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    
+    # Load full dataset WITHOUT transform (we'll apply it later)
+    full_dataset = datasets.ImageFolder(root=root_path)
+    
+    # LOCK THE SPLIT
+    torch.manual_seed(42)
+    
+    # Split off the 10% test set first (never use this data)
+    total_size = len(full_dataset)
+    final_test_size = int(0.1 * total_size)
+    trainable_size = total_size - final_test_size
+    trainable_set, _ = random_split(full_dataset, [trainable_size, final_test_size])
+    
+    # Now extract exactly samples_per_class from each class
+    class_indices = {i: [] for i in range(len(full_dataset.classes))}
+    for idx in range(len(trainable_set)):
+        _, label = trainable_set[idx]
+        if len(class_indices[label]) < samples_per_class:
+            class_indices[label].append(idx)
+        # Stop early if we have enough
+        if all(len(indices) >= samples_per_class for indices in class_indices.values()):
+            break
+    
+    # Collect all selected indices
+    selected_indices = []
+    for class_id in sorted(class_indices.keys()):
+        selected_indices.extend(class_indices[class_id][:samples_per_class])
+    
+    # Create subset
+    small_dataset = torch.utils.data.Subset(trainable_set, selected_indices)
+    
+    # Split into 80% train and 20% validation
+    train_size = int(0.8 * len(small_dataset))
+    val_size = len(small_dataset) - train_size
+    
+    train_set, val_set = random_split(small_dataset, [train_size, val_size])
+    
+    # Wrap training set with augmentation
+    train_set_augmented = AugmentedDataset(train_set, augmentation_transform)
+    
+    # Wrap validation set with basic transform (no augmentation)
+    val_set_transformed = AugmentedDataset(val_set, basic_transform)
+    
+    return train_set_augmented, val_set_transformed
 
 def get_dataset():
     """
