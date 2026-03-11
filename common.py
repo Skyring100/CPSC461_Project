@@ -73,110 +73,74 @@ def get_convkan_model(device, version=""):
     Returns the compiled ConvKAN model.
     Using a function ensures main.py and evaluate.py match exactly.
     """
-    if version == "":
-        model = nn.Sequential(
-            ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
-            LayerNorm2D(32),
-            nn.MaxPool2d(2), 
-            
-            ConvKAN(32, 64, padding=1, kernel_size=3, stride=1),
-            LayerNorm2D(64),
-            nn.MaxPool2d(2),
-            
-            ConvKAN(64, 128, padding=1, kernel_size=3, stride=1),
-            LayerNorm2D(128),
-            nn.MaxPool2d(2),
+    return get_model(device, True, version)
+    
+    '''
+    model = nn.Sequential(
+        ConvKAN(3, 32, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(32),
+        nn.MaxPool2d(2), 
+        
+        ConvKAN(32, 64, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(64),
+        nn.MaxPool2d(2),
+        
+        ConvKAN(64, 128, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(128),
+        nn.MaxPool2d(2),
 
-            ConvKAN(128, 256, padding=1, kernel_size=3, stride=1),
-            LayerNorm2D(256),
-            nn.MaxPool2d(2),       
+        ConvKAN(128, 256, padding=1, kernel_size=3, stride=1),
+        LayerNorm2D(256),
+        nn.MaxPool2d(2),       
 
-            nn.Flatten(),
-            # Linear is equivalent to dense layer
-            nn.Linear(9216, 256),
-            nn.LeakyReLU(),
-            nn.Linear(256,2)
-        ).to(device)
-    elif version == "simple":
-            model = nn.Sequential(
-                # Input = 3 x 30 x 30
-                ConvKAN(3, 32, kernel_size=3, stride=1),
-                # Output = 32 x 28 x 28
-                LayerNorm2D(32),
-                nn.MaxPool2d(2),
-                # Output = 32 x 14 x 14
+        nn.Flatten(),
+        # Linear is equivalent to dense layer
+        nn.Linear(9216, 256),
+        nn.LeakyReLU(),
+        nn.Linear(256,2)
+    ).to(device)
 
-
-                ConvKAN(32, 64, kernel_size=3, stride=1),
-                # Output = 64 x 12 x 12
-                LayerNorm2D(64),
-                nn.MaxPool2d(2),
-                # Output = 64 x 6 x 6
-                
-
-                nn.Flatten(),
-                # Linear is equivalent to dense layer
-                nn.Linear(2304, 2),
-            ).to(device)
     return model
+    '''
 
 def get_cnn_model(device, version=""):
     """
     A Standard CNN Baseline.
-    Structure mimics the ConvKAN: 3 layers, roughly same depth.
+    Structure mimics the ConvKAN
     """
-    if version == "":
-        model = nn.Sequential(
-            nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2), 
-            
-            nn.Conv2d(32, 64, padding=1, kernel_size=3, stride=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2),
-            
-            nn.Conv2d(64, 128, padding=1, kernel_size=3, stride=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2),
+    return get_model(device, False, version)
 
-            nn.Conv2d(128, 256, padding=1, kernel_size=3, stride=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2),       
+    '''
+    model = nn.Sequential(
+        nn.Conv2d(3, 32, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(32),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2), 
+        
+        nn.Conv2d(32, 64, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(64),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),
+        
+        nn.Conv2d(64, 128, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),
 
-            nn.Flatten(),
-            # Linear is equivalent to dense layer
-            nn.Linear(9216, 256),
-            nn.LeakyReLU(),
-            nn.Linear(256,2)
-        ).to(device)
-    elif version == "simple":
-        model = nn.Sequential(
-            # Input = 3 x 30 x 30
-            nn.Conv2d(3, 32, kernel_size=3, stride=1),
-            # Output = 32 x 28 x 28
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            # Output = 32 x 14 x 14
+        nn.Conv2d(128, 256, padding=1, kernel_size=3, stride=1),
+        nn.BatchNorm2d(256),
+        nn.LeakyReLU(),
+        nn.MaxPool2d(2),       
 
-
-            nn.Conv2d(32, 64, kernel_size=3, stride=1),
-            # Output = 64 x 12 x 12
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            # Output = 64 x 6 x 6
-               
-
-            nn.Flatten(),
-            # Linear is equivalent to dense layer
-            nn.Linear(2304, 2),
-        ).to(device)
+        nn.Flatten(),
+        # Linear is equivalent to dense layer
+        nn.Linear(9216, 256),
+        nn.LeakyReLU(),
+        nn.Linear(256,2)
+    ).to(device)
+    
     return model
+    '''
 
 def get_model(device, isConvKAN : bool, version=""):
     model = nn.Sequential()
@@ -196,18 +160,30 @@ def get_model(device, isConvKAN : bool, version=""):
             model.append(nn.LeakyReLU())
         model.append(nn.MaxPool2d(2)) 
 
-
         add_convolutional_layer(model, isConvKAN, 128, 256, 3, 1, 1)
         if not isConvKAN:
             model.append(nn.LeakyReLU())
         model.append(nn.MaxPool2d(2))     
 
-        nn.Flatten(),
+        model.append(nn.Flatten())
         # Linear is equivalent to dense layer
-        nn.Linear(9216, 256),
-        nn.LeakyReLU(),
-        nn.Linear(256,2)
-    
+        model.append(nn.Linear(9216, 256))
+        model.appednd(nn.LeakyReLU())
+        model.append(nn.Linear(256,2))
+    elif version == "simple":
+        add_convolutional_layer(model, isConvKAN, 3, 32, 3, 1, 1)
+        if not isConvKAN:
+            model.append(nn.LeakyReLU())
+        model.append(nn.MaxPool2d(2)) 
+
+        add_convolutional_layer(model, isConvKAN, 32, 64, 3, 1, 1)
+        if not isConvKAN:
+            model.append(nn.LeakyReLU())
+        model.append(nn.MaxPool2d(2)) 
+
+        model.append(nn.Flatten())
+        model.append(nn.Linear(2304,2))
+
     return model.to(device)
 
 def add_convolutional_layer(model : nn.Sequential, isConvKAN : bool, inChannel, outChannel, kernel_size, stride, padding):
