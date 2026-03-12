@@ -64,10 +64,10 @@ CNN_OVERFITTING_PATH = "malaria_cnn_overfitting.pth"
 def format_experiment_path(template, percentage):
     """Formats an experiment path with the given percentage (10, 20, ..., 90)."""
     return template.format(pct=int(percentage * 100))  
+
 # --- MODEL ARCHITECTURE ---
 # To calculate convolutional output layer height/width: (floor(last_size + 2x(Padding) - Kernel_size)/Stride)+1
 # For simplicity, if padding=0 and stride=1, then we have: last_size - kernel_size + 1
-# Using https://www.nature.com/articles/s41598-025-87979-5 for layer composition reference. They use CNNs for Malaria detection
 def get_convkan_model(device, version=""):
     """
     Returns the compiled ConvKAN model.
@@ -145,6 +145,7 @@ def get_cnn_model(device, version=""):
 def get_model(device, isConvKAN : bool, version=""):
     model = nn.Sequential()
     if version == "":
+        # Using https://www.nature.com/articles/s41598-025-87979-5 for layer composition reference. They use CNNs for Malaria detection
         add_convolutional_layer(model, isConvKAN, 3, 32, 3, 1, 1)
         if not isConvKAN:
             model.append(nn.LeakyReLU())
@@ -171,14 +172,15 @@ def get_model(device, isConvKAN : bool, version=""):
         model.appednd(nn.LeakyReLU())
         model.append(nn.Linear(256,2))
     elif version == "simple":
-        add_convolutional_layer(model, isConvKAN, 3, 32, 3, 1, 1)
+        # Simpler architecture compared to above, only using 2 convolutional layers and a single dense layer
+        add_convolutional_layer(model, isConvKAN, 3, 32, 3, 1, 1, 0)
         if not isConvKAN:
-            model.append(nn.LeakyReLU())
+            model.append(nn.ReLU())
         model.append(nn.MaxPool2d(2)) 
 
-        add_convolutional_layer(model, isConvKAN, 32, 64, 3, 1, 1)
+        add_convolutional_layer(model, isConvKAN, 32, 64, 3, 1, 1, 0)
         if not isConvKAN:
-            model.append(nn.LeakyReLU())
+            model.append(nn.ReLU())
         model.append(nn.MaxPool2d(2)) 
 
         model.append(nn.Flatten())
