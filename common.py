@@ -48,18 +48,27 @@ class AugmentedDataset(torch.utils.data.Dataset):
         return img, label
 
 # --- CONFIGURATION ---
+
+# Create folders for various model files
+
+folders = ["dataset_sizes", "overfit"]
+for f in folders:
+    folder_path = os.getcwd()+os.pathsep+f
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
 IMG_SIZE = 100
 BATCH_SIZE = 32
 CONVKAN_SAVE_PATH = "malaria_convkan.pth" 
 CNN_SAVE_PATH = "malaria_cnn.pth"
 
 # Experiment path templates (use format_experiment_path() to create)
-CONVKAN_EXPERIMENT_TEMPLATE = "malaria_convkan_{pct}pct.pth"
-CNN_EXPERIMENT_TEMPLATE = "malaria_cnn_{pct}pct.pth"
+CONVKAN_EXPERIMENT_TEMPLATE = "dataset_sizes"+os.pathsep+"{pct}"+os.pathsep+"malaria_convkan_{pct}pct.pth"
+CNN_EXPERIMENT_TEMPLATE = "dataset_sizes"+os.pathsep+"{pct}"+os.pathsep+"malaria_cnn_{pct}pct.pth"
 
 # Overfitting experiment paths
-CONVKAN_OVERFITTING_PATH = "malaria_convkan_overfitting.pth"
-CNN_OVERFITTING_PATH = "malaria_cnn_overfitting.pth"
+CONVKAN_OVERFITTING_PATH = "overfit"+os.pathsep+"malaria_convkan_overfitting.pth"
+CNN_OVERFITTING_PATH = "overfit"+os.pathsep+"malaria_cnn_overfitting.pth"
 
 def format_experiment_path(template, percentage):
     """Formats an experiment path with the given percentage (10, 20, ..., 90)."""
