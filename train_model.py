@@ -11,7 +11,7 @@ import json
 
 from common import (
     get_data_split, count_parameters,
-    prepare_dataset_root, MODELS_ROOT, ensure_parent_dir
+    prepare_dataset_root, MODELS_ROOT, ensure_parent_dir, LOADED_DATASET_INDEX
 )
 
 def train_model(model_name, get_model):
@@ -23,9 +23,9 @@ def train_model(model_name, get_model):
     MAX_EPOCHS = 100
 
     NANO_DIR = os.path.join(MODELS_ROOT, VERSION)
-    MODEL_PATH = os.path.join(NANO_DIR, f"malaria_{model_name}_{VERSION}.pth")
-    GRAPH_PATH = os.path.join(NANO_DIR, f"{model_name}_{VERSION}_metrics.png")
-    STATS_PATH = os.path.join(NANO_DIR, f"{model_name}_{VERSION}_stats.json")
+    MODEL_PATH = os.path.join(NANO_DIR, f"malaria_{model_name}_{VERSION}_{LOADED_DATASET_INDEX}.pth")
+    GRAPH_PATH = os.path.join(NANO_DIR, f"{model_name}_{VERSION}_{LOADED_DATASET_INDEX}_metrics.png")
+    STATS_PATH = os.path.join(NANO_DIR, f"{model_name}_{VERSION}_{LOADED_DATASET_INDEX}_stats.json")
     ensure_parent_dir(MODEL_PATH)
 
     # 2. DATA & MODEL

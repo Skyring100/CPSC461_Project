@@ -15,6 +15,10 @@ IMG_SIZE = 48
 BATCH_SIZE = 16 
 MODELS_ROOT = "models"
 
+MALARIA_DATASETS = ["iarunava/cell-images-for-detecting-malaria", "nipunarora8/malaria-detection-dataset"]
+
+LOADED_DATASET_INDEX = "local"
+
 # --- HELPER CLASSES ---
 
 class AugmentedDataset(torch.utils.data.Dataset):
@@ -137,7 +141,7 @@ def get_cnn_model(device, version="standard"):
 
 def find_data_root(start_path):
     for root, dirs, _ in os.walk(start_path):
-        if "Parasitized" in dirs and "Uninfected" in dirs: return root
+        if "Uninfected" in dirs: return root
     return start_path
 
 def get_data_split(root_path, percentage=1.0):
@@ -203,15 +207,27 @@ def get_small_fixed_dataset(root_path, samples_per_class=20):
     return AugmentedDataset(train_p, aug_transform), AugmentedDataset(val_p, basic_transform)
 
 def get_dataset():
-    if len(sys.argv) == 2: return sys.argv[1]
+    # Check if user supplied an argument
+    url = MALARIA_DATASETS[0]
+    if len(sys.argv) == 2: 
+        argument = sys.argv[1]
+        # If user supplied a dataset path, then use that path
+        if os.path.exists(argument): 
+            return argument
+        # If user supplied a dataset number, then use the corresponding link
+        elif int(argument) <= len(MALARIA_DATASETS):
+            url = MALARIA_DATASETS[int(argument)-1]
+            LOADED_DATASET_INDEX = MALARIA_DATASETS[int(argument)-1]
     load_dotenv()
-    return kagglehub.dataset_download("iarunava/cell-images-for-detecting-malaria")
+    print("Downloading "+url)
+    data_path = kagglehub.dataset_download(url)
+    print("Dataset path is located at "+data_path)
+    return data_path
 
 def prepare_dataset_root(dataset_path=None):
     if dataset_path is None: dataset_path = get_dataset()
     real_root = find_data_root(dataset_path)
-    if os.path.isdir(os.path.join(real_root, "cell_images")): 
-        shutil.rmtree(os.path.join(real_root, "cell_images"))
+    print(f"Parent image path {real_root}")
     return real_root
 
 def count_parameters(model):
