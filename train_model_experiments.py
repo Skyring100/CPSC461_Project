@@ -10,7 +10,7 @@ from common import (
     ensure_parent_dir
 )
 
-def train_model(model_name, get_model, template):
+def train_model_experiments(model_name, get_model, template):
     # 1. SETUP
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Training {model_name} experiments on: {device}")

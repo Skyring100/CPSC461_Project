@@ -11,7 +11,7 @@ from common import (
     prepare_dataset_root, ensure_parent_dir
 )
 
-def train_model(model_name, get_model, overfitting_path):
+def train_model_overfitting(model_name, get_model, overfitting_path):
 
     # 1. SETUP
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
