@@ -15,6 +15,87 @@ from common import (
     format_experiment_path, BATCH_SIZE
 )
 
+
+def evaluate_model(model, test_loader, device):
+    y_true = []
+    preds_list = []
+    probs_list = []
+
+    with torch.no_grad():
+        for x, y in test_loader:
+            x, y = x.to(device), y.to(device)
+            outputs = model(x)
+            probs = torch.softmax(outputs, 1)
+            _, preds = torch.max(outputs, 1)
+            y_true.extend(y.cpu().numpy())
+            preds_list.extend(preds.cpu().numpy())
+            probs_list.extend(probs.cpu().numpy())
+
+    y_true = np.array(y_true)
+    preds_list = np.array(preds_list)
+    probs_list = np.array(probs_list)
+
+    # Calculate metrics
+    acc = accuracy_score(y_true, preds_list) * 100
+    f1 = f1_score(y_true, preds_list, average='binary') * 100
+    precision = precision_score(y_true, preds_list, average='binary') * 100
+    recall = recall_score(y_true, preds_list, average='binary') * 100
+    auc = roc_auc_score(y_true, probs_list[:, 1]) * 100
+
+    # Create confusion matrix
+    cm = confusion_matrix(y_true, preds_list)
+
+    return acc, f1, precision, recall, auc, cm
+
+
+def load_and_evaluate_model(model_name, model_path, get_model_fn, pct_display, test_loader, device):
+    if os.path.exists(model_path):
+        model = get_model_fn(device)
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.eval()
+
+        acc, f1, precision, recall, auc, cm = evaluate_model(model, test_loader, device)
+
+        print(f"  {model_name}:")
+        print(f"    Accuracy:  {acc:.2f}%")
+        print(f"    F1 Score:  {f1:.2f}%")
+        print(f"    Precision: {precision:.2f}%")
+        print(f"    Recall:    {recall:.2f}%")
+        print(f"    AUC:       {auc:.2f}%")
+
+        return {
+            'pct': pct_display,
+            'accuracy': acc,
+            'f1': f1,
+            'precision': precision,
+            'recall': recall,
+            'auc': auc,
+            'confusion_matrix': cm
+        }
+    else:
+        print(f"  {model_name}:  NOT FOUND ({model_path})")
+        return {
+            'pct': pct_display,
+            'accuracy': None,
+            'f1': None,
+            'precision': None,
+            'recall': None,
+            'auc': None,
+            'confusion_matrix': None
+        }
+
+
+def plot_metric_axis(ax, percentages, kan_vals, cnn_vals, ylabel, title):
+    ax.plot(percentages, kan_vals, marker='o', label='ConvKAN', linewidth=2, markersize=8)
+    ax.plot(percentages, cnn_vals, marker='s', label='CNN Baseline', linewidth=2, markersize=8)
+    ax.set_xlabel('Training Data Percentage (%)', fontsize=11)
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10)
+    ax.set_xticks(percentages)
+
+
 # 1. SETUP & DATA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Evaluating experiments on: {device}\n")
@@ -49,134 +130,18 @@ for percentage in PERCENTAGES:
     pct_display = int(percentage * 100)
     print(f"\nExperiment: {pct_display}% training data")
     print("-" * 70)
-    
+
     # Load ConvKAN model
     kan_path = format_experiment_path(CONVKAN_EXPERIMENT_TEMPLATE, percentage)
-    if os.path.exists(kan_path):
-        kan_model = get_convkan_model(device)
-        kan_model.load_state_dict(torch.load(kan_path, map_location=device))
-        kan_model.eval()
-        
-        # Evaluate ConvKAN
-        y_true = []
-        kan_preds = []
-        kan_probs = []
-        
-        with torch.no_grad():
-            for x, y in test_loader:
-                x, y = x.to(device), y.to(device)
-                outputs = kan_model(x)
-                probs = torch.softmax(outputs, 1)
-                _, preds = torch.max(outputs, 1)
-                y_true.extend(y.cpu().numpy())
-                kan_preds.extend(preds.cpu().numpy())
-                kan_probs.extend(probs.cpu().numpy())
-        
-        y_true = np.array(y_true)
-        kan_preds = np.array(kan_preds)
-        kan_probs = np.array(kan_probs)
-        
-        # Calculate metrics
-        kan_acc = accuracy_score(y_true, kan_preds) * 100
-        kan_f1 = f1_score(y_true, kan_preds, average='binary') * 100
-        kan_precision = precision_score(y_true, kan_preds, average='binary') * 100
-        kan_recall = recall_score(y_true, kan_preds, average='binary') * 100
-        kan_auc = roc_auc_score(y_true, kan_probs[:, 1]) * 100
-        
-        # Create confusion matrix
-        kan_cm = confusion_matrix(y_true, kan_preds)
-        
-        results['convkan'].append({
-            'pct': pct_display,
-            'accuracy': kan_acc,
-            'f1': kan_f1,
-            'precision': kan_precision,
-            'recall': kan_recall,
-            'auc': kan_auc,
-            'confusion_matrix': kan_cm
-        })
-        
-        print(f"  ConvKAN:")
-        print(f"    Accuracy:  {kan_acc:.2f}%")
-        print(f"    F1 Score:  {kan_f1:.2f}%")
-        print(f"    Precision: {kan_precision:.2f}%")
-        print(f"    Recall:    {kan_recall:.2f}%")
-        print(f"    AUC:       {kan_auc:.2f}%")
-    else:
-        print(f"  ConvKAN:  NOT FOUND ({kan_path})")
-        results['convkan'].append({
-            'pct': pct_display,
-            'accuracy': None,
-            'f1': None,
-            'precision': None,
-            'recall': None,
-            'auc': None,
-            'confusion_matrix': None
-        })
-    
+    results['convkan'].append(load_and_evaluate_model(
+        'ConvKAN', kan_path, get_convkan_model, pct_display, test_loader, device
+    ))
+
     # Load CNN model
     cnn_path = format_experiment_path(CNN_EXPERIMENT_TEMPLATE, percentage)
-    if os.path.exists(cnn_path):
-        cnn_model = get_cnn_model(device)
-        cnn_model.load_state_dict(torch.load(cnn_path, map_location=device))
-        cnn_model.eval()
-        
-        # Evaluate CNN
-        y_true = []
-        cnn_preds = []
-        cnn_probs = []
-        
-        with torch.no_grad():
-            for x, y in test_loader:
-                x, y = x.to(device), y.to(device)
-                outputs = cnn_model(x)
-                probs = torch.softmax(outputs, 1)
-                _, preds = torch.max(outputs, 1)
-                y_true.extend(y.cpu().numpy())
-                cnn_preds.extend(preds.cpu().numpy())
-                cnn_probs.extend(probs.cpu().numpy())
-        
-        y_true = np.array(y_true)
-        cnn_preds = np.array(cnn_preds)
-        cnn_probs = np.array(cnn_probs)
-        
-        # Calculate metrics
-        cnn_acc = accuracy_score(y_true, cnn_preds) * 100
-        cnn_f1 = f1_score(y_true, cnn_preds, average='binary') * 100
-        cnn_precision = precision_score(y_true, cnn_preds, average='binary') * 100
-        cnn_recall = recall_score(y_true, cnn_preds, average='binary') * 100
-        cnn_auc = roc_auc_score(y_true, cnn_probs[:, 1]) * 100
-        
-        # Create confusion matrix
-        cnn_cm = confusion_matrix(y_true, cnn_preds)
-        
-        results['cnn'].append({
-            'pct': pct_display,
-            'accuracy': cnn_acc,
-            'f1': cnn_f1,
-            'precision': cnn_precision,
-            'recall': cnn_recall,
-            'auc': cnn_auc,
-            'confusion_matrix': cnn_cm
-        })
-        
-        print(f"  CNN:")
-        print(f"    Accuracy:  {cnn_acc:.2f}%")
-        print(f"    F1 Score:  {cnn_f1:.2f}%")
-        print(f"    Precision: {cnn_precision:.2f}%")
-        print(f"    Recall:    {cnn_recall:.2f}%")
-        print(f"    AUC:       {cnn_auc:.2f}%")
-    else:
-        print(f"  CNN:      NOT FOUND ({cnn_path})")
-        results['cnn'].append({
-            'pct': pct_display,
-            'accuracy': None,
-            'f1': None,
-            'precision': None,
-            'recall': None,
-            'auc': None,
-            'confusion_matrix': None
-        })
+    results['cnn'].append(load_and_evaluate_model(
+        'CNN', cnn_path, get_cnn_model, pct_display, test_loader, device
+    ))
 
 # 3. PLOT CONFUSION MATRICES
 print(f"\n{'='*70}")
@@ -281,44 +246,13 @@ if kan_accs and cnn_accs:
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Accuracy plot
-    axes[0, 0].plot(percentages, kan_accs, marker='o', label='ConvKAN', linewidth=2, markersize=8)
-    axes[0, 0].plot(percentages, cnn_accs, marker='s', label='CNN Baseline', linewidth=2, markersize=8)
-    axes[0, 0].set_xlabel('Training Data Percentage (%)', fontsize=11)
-    axes[0, 0].set_ylabel('Accuracy (%)', fontsize=11)
-    axes[0, 0].set_title('Accuracy vs Training Data Size', fontsize=12, fontweight='bold')
-    axes[0, 0].grid(True, alpha=0.3)
-    axes[0, 0].legend(fontsize=10)
-    axes[0, 0].set_xticks(percentages)
-    
+    plot_metric_axis(axes[0, 0], percentages, kan_accs, cnn_accs, 'Accuracy (%)', 'Accuracy vs Training Data Size')
     # F1 Score plot
-    axes[0, 1].plot(percentages, kan_f1s, marker='o', label='ConvKAN', linewidth=2, markersize=8)
-    axes[0, 1].plot(percentages, cnn_f1s, marker='s', label='CNN Baseline', linewidth=2, markersize=8)
-    axes[0, 1].set_xlabel('Training Data Percentage (%)', fontsize=11)
-    axes[0, 1].set_ylabel('F1 Score (%)', fontsize=11)
-    axes[0, 1].set_title('F1 Score vs Training Data Size', fontsize=12, fontweight='bold')
-    axes[0, 1].grid(True, alpha=0.3)
-    axes[0, 1].legend(fontsize=10)
-    axes[0, 1].set_xticks(percentages)
-    
+    plot_metric_axis(axes[0, 1], percentages, kan_f1s, cnn_f1s, 'F1 Score (%)', 'F1 Score vs Training Data Size')
     # Precision plot
-    axes[1, 0].plot(percentages, kan_precisions, marker='o', label='ConvKAN', linewidth=2, markersize=8)
-    axes[1, 0].plot(percentages, cnn_precisions, marker='s', label='CNN Baseline', linewidth=2, markersize=8)
-    axes[1, 0].set_xlabel('Training Data Percentage (%)', fontsize=11)
-    axes[1, 0].set_ylabel('Precision (%)', fontsize=11)
-    axes[1, 0].set_title('Precision vs Training Data Size', fontsize=12, fontweight='bold')
-    axes[1, 0].grid(True, alpha=0.3)
-    axes[1, 0].legend(fontsize=10)
-    axes[1, 0].set_xticks(percentages)
-    
+    plot_metric_axis(axes[1, 0], percentages, kan_precisions, cnn_precisions, 'Precision (%)', 'Precision vs Training Data Size')
     # Recall plot
-    axes[1, 1].plot(percentages, kan_recalls, marker='o', label='ConvKAN', linewidth=2, markersize=8)
-    axes[1, 1].plot(percentages, cnn_recalls, marker='s', label='CNN Baseline', linewidth=2, markersize=8)
-    axes[1, 1].set_xlabel('Training Data Percentage (%)', fontsize=11)
-    axes[1, 1].set_ylabel('Recall (%)', fontsize=11)
-    axes[1, 1].set_title('Recall vs Training Data Size', fontsize=12, fontweight='bold')
-    axes[1, 1].grid(True, alpha=0.3)
-    axes[1, 1].legend(fontsize=10)
-    axes[1, 1].set_xticks(percentages)
+    plot_metric_axis(axes[1, 1], percentages, kan_recalls, cnn_recalls, 'Recall (%)', 'Recall vs Training Data Size')
     
     fig.suptitle('Model Performance Comparison - Multiple Metrics\n(Evaluated on held-out 10% test set)', fontsize=14, fontweight='bold')
     fig.tight_layout()
