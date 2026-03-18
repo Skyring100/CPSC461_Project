@@ -8,7 +8,7 @@ import numpy as np
 # Import shared logic
 from common import (
     get_convkan_model, get_small_fixed_dataset,
-    prepare_dataset_root, CONVKAN_OVERFITTING_PATH
+    prepare_dataset_root, CONVKAN_OVERFITTING_PATH, ensure_parent_dir
 )
 
 # 1. SETUP
@@ -35,7 +35,7 @@ print(f"Using batch size: {OVERFIT_BATCH_SIZE}")
 print(f"Data augmentation: ENABLED (training set only)\n")
 
 # 4. INIT MODEL
-model = get_convkan_model(device)
+model = get_convkan_model(device, version="simple")
 # Use class weights to ensure balanced learning
 class_weights = torch.tensor([1.0, 1.0], device=device)  # Equal weights for both classes
 criterion = nn.CrossEntropyLoss(weight=class_weights)
@@ -139,6 +139,7 @@ print(f"{'='*80}\n")
 if best_model_state is not None:
     model.load_state_dict(best_model_state)
     print(f"Loaded best model from epoch {best_epoch} (val loss: {best_val_loss:.4f})")
+ensure_parent_dir(CONVKAN_OVERFITTING_PATH)
 torch.save(model.state_dict(), CONVKAN_OVERFITTING_PATH)
 print(f"Best model saved to {CONVKAN_OVERFITTING_PATH}")
 

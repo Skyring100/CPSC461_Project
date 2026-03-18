@@ -6,7 +6,8 @@ from tqdm import tqdm
 # Import shared logic
 from common import (
     get_cnn_model, get_data_split,
-    prepare_dataset_root, BATCH_SIZE, CNN_EXPERIMENT_TEMPLATE, format_experiment_path
+    prepare_dataset_root, BATCH_SIZE, CNN_EXPERIMENT_TEMPLATE, format_experiment_path,
+    ensure_parent_dir
 )
 
 # 1. SETUP
@@ -79,6 +80,7 @@ for experiment_num, percentage in enumerate(PERCENTAGES, 1):
     
     # Save model
     save_path = format_experiment_path(CNN_EXPERIMENT_TEMPLATE, percentage)
+    ensure_parent_dir(save_path)
     torch.save(model.state_dict(), save_path)
     print(f"Model saved to {save_path}")
 

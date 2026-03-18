@@ -18,7 +18,7 @@ from collections import defaultdict
 
 from common import (
     get_cnn_model, get_convkan_model, get_small_fixed_dataset, get_test_set,
-    prepare_dataset_root, BATCH_SIZE
+    prepare_dataset_root, BATCH_SIZE, get_overfit_sweep_path, ensure_parent_dir
 )
 
 # Sample sizes to test (samples per class)
@@ -183,7 +183,7 @@ def main():
         print(f"Batch size: {batch_size}")
         
         # Train CNN
-        cnn_model = get_cnn_model(device)
+        cnn_model = get_cnn_model(device, version="android")
         class_weights = torch.tensor([1.0, 1.0], device=device)
         cnn_criterion = nn.CrossEntropyLoss(weight=class_weights)
         cnn_optimizer = torch.optim.AdamW(cnn_model.parameters(), lr=LEARNING_RATE, weight_decay=0.01)
@@ -193,7 +193,8 @@ def main():
         cnn_test_acc = evaluate_on_test_set(cnn_model, test_loader, device)
         
         # Save CNN model
-        cnn_path = f"malaria_cnn_overfit_{samples_per_class}samples.pth"
+        cnn_path = get_overfit_sweep_path("cnn", samples_per_class)
+        ensure_parent_dir(cnn_path)
         torch.save(cnn_model.state_dict(), cnn_path)
         
         results['cnn'][samples_per_class] = {
@@ -205,7 +206,7 @@ def main():
         print(f"  CNN Test Accuracy: {cnn_test_acc:.2f}%")
         
         # Train ConvKAN
-        kan_model = get_convkan_model(device)
+        kan_model = get_convkan_model(device, version="android")
         kan_criterion = nn.CrossEntropyLoss(weight=class_weights)
         kan_optimizer = torch.optim.AdamW(kan_model.parameters(), lr=LEARNING_RATE, weight_decay=0.01)
         
@@ -214,7 +215,8 @@ def main():
         kan_test_acc = evaluate_on_test_set(kan_model, test_loader, device)
         
         # Save ConvKAN model
-        kan_path = f"malaria_convkan_overfit_{samples_per_class}samples.pth"
+        kan_path = get_overfit_sweep_path("convkan", samples_per_class)
+        ensure_parent_dir(kan_path)
         torch.save(kan_model.state_dict(), kan_path)
         
         results['convkan'][samples_per_class] = {
@@ -310,8 +312,8 @@ def main():
     print("\nGenerated files:")
     print("  - overfitting_experiments/test_accuracy_comparison.png")
     print("  - overfitting_experiments/validation_curves_all.png")
-    print("  - malaria_cnn_overfit_*samples.pth (model files)")
-    print("  - malaria_convkan_overfit_*samples.pth (model files)")
+    print("  - models/overfit_trials/cnn/malaria_cnn_overfit_*samples.pth")
+    print("  - models/overfit_trials/convkan/malaria_convkan_overfit_*samples.pth")
 
 if __name__ == "__main__":
     main()

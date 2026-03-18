@@ -15,7 +15,7 @@ from collections import defaultdict
 
 from common import (
     get_cnn_model, get_convkan_model, get_test_set,
-    prepare_dataset_root, BATCH_SIZE
+    prepare_dataset_root, BATCH_SIZE, get_overfit_sweep_path
 )
 
 # Sample sizes that were trained
@@ -67,7 +67,7 @@ def main():
         print(f"\nEvaluating models trained on {samples_per_class} samples/class...")
         
         # Evaluate CNN
-        cnn_path = f"malaria_cnn_overfit_{samples_per_class}samples.pth"
+        cnn_path = get_overfit_sweep_path("cnn", samples_per_class)
         if os.path.exists(cnn_path):
             cnn_model = get_cnn_model(device)
             cnn_model.load_state_dict(torch.load(cnn_path, map_location=device))
@@ -79,7 +79,7 @@ def main():
             results['cnn'][samples_per_class] = None
         
         # Evaluate ConvKAN
-        kan_path = f"malaria_convkan_overfit_{samples_per_class}samples.pth"
+        kan_path = get_overfit_sweep_path("convkan", samples_per_class)
         if os.path.exists(kan_path):
             kan_model = get_convkan_model(device)
             kan_model.load_state_dict(torch.load(kan_path, map_location=device))

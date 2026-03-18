@@ -1,102 +1,95 @@
 import torch
 import os
+import json
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 
-# Import shared logic from your updated common.py
 from common import (
-    get_convkan_model, get_cnn_model, get_data_split,
-    prepare_dataset_root, CONVKAN_SAVE_PATH, CNN_SAVE_PATH, BATCH_SIZE
+    get_convkan_model, get_cnn_model, get_data_split, count_parameters,
+    prepare_dataset_root, MODELS_ROOT, BATCH_SIZE
 )
 
-# 1. SETUP & DATA
+def get_root_classes(dataset):
+    curr = dataset
+    while hasattr(curr, 'dataset'):
+        curr = curr.dataset
+    return getattr(curr, 'classes', ['Parasitized', 'Uninfected'])
+
+# 1. SETUP
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+VERSION = "nano"
 real_root = prepare_dataset_root()
 
-# Load test set only (discarding train_set)
+NANO_DIR = os.path.join(MODELS_ROOT, VERSION)
+NANO_CNN_PATH = os.path.join(NANO_DIR, f"malaria_cnn_{VERSION}.pth")
+NANO_CONVKAN_PATH = os.path.join(NANO_DIR, f"malaria_convkan_{VERSION}.pth")
+CNN_STATS_PATH = os.path.join(NANO_DIR, f"cnn_{VERSION}_stats.json")
+KAN_STATS_PATH = os.path.join(NANO_DIR, f"convkan_{VERSION}_stats.json")
+
 _, test_dataset = get_data_split(real_root) 
 loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-classes = test_dataset.dataset.classes
+classes = get_root_classes(test_dataset)
 
-# 2. LOAD MODELS
-print("Loading ConvKAN...")
-kan_model = get_convkan_model(device)
-if os.path.exists(CONVKAN_SAVE_PATH):
-    # FIXED: Was previously loading MODEL_SAVE_PATH instead of CONVKAN_SAVE_PATH
-    kan_model.load_state_dict(torch.load(CONVKAN_SAVE_PATH, map_location=device))
-    kan_model.eval()
-else:
-    print(f"Warning: {CONVKAN_SAVE_PATH} not found! Run train_convkan.py first.")
-    exit()
+# 2. LOAD MODELS & STATS
+print(f"--- Loading {VERSION.upper()} Tier Data ---")
 
-print("Loading CNN...")
-cnn_model = get_cnn_model(device)
-if os.path.exists(CNN_SAVE_PATH):
-    cnn_model.load_state_dict(torch.load(CNN_SAVE_PATH, map_location=device))
-    cnn_model.eval()
-else:
-    print(f"Warning: {CNN_SAVE_PATH} not found! Run train_cnn.py first.")
-    exit()
+# Load Weights
+kan_model = get_convkan_model(device, version=VERSION)
+kan_model.load_state_dict(torch.load(NANO_CONVKAN_PATH, map_location=device))
+kan_model.eval()
 
-# 3. RUN BATTLE
-y_true = []
-kan_preds = []
-cnn_preds = []
+cnn_model = get_cnn_model(device, version=VERSION)
+cnn_model.load_state_dict(torch.load(NANO_CNN_PATH, map_location=device))
+cnn_model.eval()
 
-print(f"\nComparing models on {len(test_dataset)} images...")
+# Load JSON Stats
+with open(CNN_STATS_PATH, 'r') as f: cnn_stats = json.load(f)
+with open(KAN_STATS_PATH, 'r') as f: kan_stats = json.load(f)
 
+# 3. RUN INFERENCE TEST
+y_true, kan_preds, cnn_preds = [], [], []
 with torch.no_grad():
     for x, y in loader:
         x, y = x.to(device), y.to(device)
-        
-        # ConvKAN Inference
-        outputs_k = kan_model(x)
-        _, k_pred = torch.max(outputs_k, 1)
-        
-        # CNN Inference
-        outputs_c = cnn_model(x)
-        _, c_pred = torch.max(outputs_c, 1)
-
         y_true.extend(y.cpu().numpy())
-        kan_preds.extend(k_pred.cpu().numpy())
-        cnn_preds.extend(c_pred.cpu().numpy())
+        kan_preds.extend(torch.max(kan_model(x), 1)[1].cpu().numpy())
+        cnn_preds.extend(torch.max(cnn_model(x), 1)[1].cpu().numpy())
 
-# 4. TEXT RESULTS
+# 4. DATA CALCULATIONS
 kan_acc = accuracy_score(y_true, kan_preds) * 100
 cnn_acc = accuracy_score(y_true, cnn_preds) * 100
 
-print("\n" + "="*30)
-print("      FINAL RESULTS")
-print("="*30)
-print(f"ConvKAN Accuracy: {kan_acc:.2f}%")
-print(f"CNN Accuracy:     {cnn_acc:.2f}%")
-print("="*30)
+# Efficiency Score: How much accuracy do you get per 1,000 parameters?
+kan_eff = kan_acc / (kan_stats['params'] / 1000)
+cnn_eff = cnn_acc / (cnn_stats['params'] / 1000)
 
-if kan_acc > cnn_acc:
-    print("ConvKAN wins!")
+# 5. THE ULTIMATE RESOURCE COMPARISON TABLE
+print("\n" + "="*65)
+print(f"{'FINAL NANO-TIER BENCHMARK REPORT':^65}")
+print("="*65)
+print(f"{'Metric':<22} | {'Wide CNN':<18} | {'Thin ConvKAN':<18}")
+print("-" * 65)
+print(f"{'Total Parameters':<22} | {cnn_stats['params']:<18,} | {kan_stats['params']:<18,}")
+print(f"{'Test Accuracy':<22} | {cnn_acc:<17.2f}% | {kan_acc:<17.2f}%")
+print(f"{'Acc / 1k Params':<22} | {cnn_eff:<18.2f} | {kan_eff:<18.2f}")
+print("-" * 65)
+print(f"{'Peak Training RAM':<22} | {cnn_stats['peak_memory_mb']:>14.2f} MB | {kan_stats['peak_memory_mb']:>14.2f} MB")
+print(f"{'Total Training Time':<22} | {cnn_stats['total_time_sec']:>14.2f} s  | {kan_stats['total_time_sec']:>14.2f} s")
+print(f"{'Avg Time / Epoch':<22} | {cnn_stats['avg_time_per_epoch']:>14.2f} s  | {kan_stats['avg_time_per_epoch']:>14.2f} s")
+print("-" * 65)
+
+# Winner Logic based on Efficiency Score
+if kan_eff > cnn_eff:
+    print(f"OVERALL WINNER: ConvKAN ({kan_eff/cnn_eff:.2f}x more parameter-efficient)")
 else:
-    print("CNN wins!")
+    print(f"OVERALL WINNER: CNN ({cnn_eff/kan_eff:.2f}x more parameter-efficient)")
+print("="*65)
 
-# 5. PLOT CONFUSION MATRICES
-print("\nPlotting Confusion Matrices...")
-
+# 6. PLOT
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-# Since common.py is now set to 2 output classes, 
-# these will naturally result in 2x2 matrices matching your 'classes' list.
-
-# Plot ConvKAN
-cm_kan = confusion_matrix(y_true, kan_preds)
-disp_kan = ConfusionMatrixDisplay(confusion_matrix=cm_kan, display_labels=classes)
-disp_kan.plot(cmap='Blues', ax=axes[0], colorbar=False)
-axes[0].set_title(f"ConvKAN (Acc: {kan_acc:.1f}%)")
-
-# Plot CNN
-cm_cnn = confusion_matrix(y_true, cnn_preds)
-disp_cnn = ConfusionMatrixDisplay(confusion_matrix=cm_cnn, display_labels=classes)
-disp_cnn.plot(cmap='Reds', ax=axes[1], colorbar=False)
-axes[1].set_title(f"CNN Baseline (Acc: {cnn_acc:.1f}%)")
-
-plt.tight_layout()
-plt.show()
+ConfusionMatrixDisplay(confusion_matrix(y_true, kan_preds), display_labels=classes).plot(cmap='Blues', ax=axes[0], colorbar=False)
+axes[0].set_title(f"Nano ConvKAN ({kan_acc:.1f}%)")
+ConfusionMatrixDisplay(confusion_matrix(y_true, cnn_preds), display_labels=classes).plot(cmap='Reds', ax=axes[1], colorbar=False)
+axes[1].set_title(f"Nano CNN ({cnn_acc:.1f}%)")
+plt.tight_layout(); plt.show()

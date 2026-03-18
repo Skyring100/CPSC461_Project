@@ -2,69 +2,111 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import os
+import matplotlib.pyplot as plt
+import copy
+import time
+import psutil
+import json # Added for data export
 
-# Import shared logic
 from common import (
-    get_cnn_model, get_data_split,
-    prepare_dataset_root, BATCH_SIZE, CNN_SAVE_PATH
+    get_cnn_model, get_data_split, count_parameters,
+    prepare_dataset_root, MODELS_ROOT, ensure_parent_dir
 )
 
 # 1. SETUP
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Training CNN Baseline on: {device}")
+VERSION = "nano" 
+NEW_BATCH_SIZE = 16 
+PATIENCE = 5        
+MAX_EPOCHS = 100
 
-# Removed local CNN_SAVE_PATH definition to use the one from common.py
-LEARNING_RATE = 1e-3
-NUM_EPOCHS = 5
+NANO_DIR = os.path.join(MODELS_ROOT, VERSION)
+MODEL_PATH = os.path.join(NANO_DIR, f"malaria_cnn_{VERSION}.pth")
+GRAPH_PATH = os.path.join(NANO_DIR, f"cnn_{VERSION}_metrics.png")
+STATS_PATH = os.path.join(NANO_DIR, f"cnn_{VERSION}_stats.json")
+ensure_parent_dir(MODEL_PATH)
 
-# 2. LOAD DATA (Exact same split as ConvKAN)
+# 2. DATA & MODEL
 real_root = prepare_dataset_root()
 train_dataset, test_dataset = get_data_split(real_root)
+train_loader = DataLoader(train_dataset, batch_size=NEW_BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=NEW_BATCH_SIZE, shuffle=False)
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-# 3. INIT CNN MODEL
-model = get_cnn_model(device)
+model = get_cnn_model(device, version=VERSION)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+
+# 3. METRIC TRACKING START
+start_time = time.perf_counter()
+if device.type == 'cuda':
+    torch.cuda.reset_peak_memory_stats()
 
 # 4. TRAINING LOOP
-print("\nStarting CNN Training...")
-for epoch in range(NUM_EPOCHS):
+history = {"train_loss": [], "val_acc": []}
+best_acc, epochs_no_improve = 0.0, 0
+
+print(f"\nStarting {VERSION.upper()} CNN Training...")
+
+for epoch in range(MAX_EPOCHS):
     model.train()
     running_loss = 0.0
-    
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{NUM_EPOCHS}")
-    
+    pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}")
     for x, y in pbar:
         x, y = x.to(device), y.to(device)
-        
-        optimizer.zero_grad()
-        y_hat = model(x)
-        loss = criterion(y_hat, y)
-        loss.backward()
-        optimizer.step()
-        
+        optimizer.zero_grad(); y_hat = model(x); loss = criterion(y_hat, y)
+        loss.backward(); optimizer.step()
         running_loss += loss.item()
-        pbar.set_postfix({'loss': f'{loss.item():.4f}'})
+    
+    epoch_loss = running_loss / len(train_loader)
+    history["train_loss"].append(epoch_loss)
 
-    # Validation
     model.eval()
-    correct = 0
-    total = 0
+    correct, total = 0, 0
     with torch.no_grad():
         for x, y in test_loader:
             x, y = x.to(device), y.to(device)
-            y_hat = model(x)
-            _, predicted = torch.max(y_hat, 1)
-            total += y.size(0)
-            correct += (predicted == y).sum().item()
+            y_hat = model(x); _, predicted = torch.max(y_hat, 1)
+            total += y.size(0); correct += (predicted == y).sum().item()
     
     acc = 100 * correct / total
-    print(f"Epoch {epoch+1} Results | Val Acc: {acc:.2f}%")
+    history["val_acc"].append(acc)
+    print(f"Epoch {epoch+1} | Loss: {epoch_loss:.4f} | Acc: {acc:.2f}%")
 
-# 5. SAVE
-# Now explicitly using CNN_SAVE_PATH from common.py
-torch.save(model.state_dict(), CNN_SAVE_PATH)
-print(f"\nCNN Model saved to {CNN_SAVE_PATH}")
+    if acc > best_acc:
+        best_acc = acc
+        best_model_wts = copy.deepcopy(model.state_dict())
+        epochs_no_improve = 0
+    else:
+        epochs_no_improve += 1
+        if epochs_no_improve >= PATIENCE: break
+
+# 5. FINAL METRICS & SAVE
+end_time = time.perf_counter()
+total_time = end_time - start_time
+peak_mem = (torch.cuda.max_memory_allocated(device) if device.type == 'cuda' 
+            else psutil.Process(os.getpid()).memory_info().rss) / (1024**2)
+
+stats = {
+    "model_type": "CNN",
+    "params": count_parameters(model),
+    "total_time_sec": total_time,
+    "avg_time_per_epoch": total_time / (epoch + 1),
+    "peak_memory_mb": peak_mem,
+    "best_val_acc": best_acc,
+    "history": history
+}
+
+with open(STATS_PATH, "w") as f:
+    json.dump(stats, f, indent=4)
+
+model.load_state_dict(best_model_wts)
+torch.save(model.state_dict(), MODEL_PATH)
+
+# 6. DUAL PLOTTING
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+ax1.plot(history["val_acc"], color='red', marker='o'); ax1.set_title("Validation Accuracy (%)")
+ax2.plot(history["train_loss"], color='blue'); ax2.set_title("Training Loss")
+plt.savefig(GRAPH_PATH); plt.close()
+
+print(f"\n--- CNN Done! Stats saved to {STATS_PATH} ---")
