@@ -2,18 +2,18 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import os
 
 # Import shared logic
 from common import (
     get_data_split,
-    prepare_dataset_root, BATCH_SIZE, format_experiment_path,
+    prepare_dataset_root, BATCH_SIZE,
     ensure_parent_dir
 )
 
-def train_model_experiments(model_name, get_model, template):
+def train_model_experiments(model_name : str, model: nn.Sequential, device):
+    base_path = os.path.join("models", "data_subsets", model_name.lower())
     # 1. SETUP
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Training {model_name} experiments on: {device}")
 
     LEARNING_RATE = 1e-3
     NUM_EPOCHS = 5
@@ -40,7 +40,6 @@ def train_model_experiments(model_name, get_model, template):
         print(f"Validation samples (20% of {int(percentage*100)}%): {len(val_dataset)}")
         
         # Init model
-        model = get_model(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
         
@@ -80,11 +79,11 @@ def train_model_experiments(model_name, get_model, template):
             print(f"Epoch {epoch+1} Results | Val Acc: {acc:.2f}%")
         
         # Save model
-        save_path = format_experiment_path(template, percentage)
+        save_path = os.path.join(base_path, f"malaria_{model_name}_subset_{percentage}.pth")
         ensure_parent_dir(save_path)
         torch.save(model.state_dict(), save_path)
         print(f"Model saved to {save_path}")
 
     print(f"\n{'='*60}")
-    print("All {model_name} experiments completed!")
+    print(f"All {model_name} experiments completed!")
     print(f"{'='*60}")
