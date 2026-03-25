@@ -1,6 +1,7 @@
 .venv
 .env
 malaria_dataset/
+medmnist/
 
 __pycache__/
 *.pyc
