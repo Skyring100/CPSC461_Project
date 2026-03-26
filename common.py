@@ -6,6 +6,7 @@ import torch.nn as nn
 from torchvision import datasets, transforms
 from torch.utils.data import random_split
 from convkan import ConvKAN, LayerNorm2D
+from ConvKAN3D.ConvKAN3D import effConvKAN3D
 import kagglehub
 from dotenv import load_dotenv
 from PIL import Image
@@ -72,9 +73,28 @@ def add_block(model, isConvKAN, in_ch, out_ch, version="standard"):
         model.append(nn.BatchNorm2d(out_ch))
         model.append(nn.LeakyReLU())
 
+def add3d_block(model, isConvKAN, in_ch, out_ch, version="standard"):
+    if isConvKAN:
+        # Nano uses linear splines (order 1) on a 2-point grid for absolute minimum weight
+        if version == "nano":
+            g_size, s_order = 2, 1 
+        elif version == "pico":
+            g_size, s_order = 2, 2
+        elif version == "android":
+            g_size, s_order = 3, 2
+        else:
+            g_size, s_order = 5, 3
+            
+        model.append(effConvKAN3D(in_ch, out_ch, kernel_size=3, stride=1, padding=1, 
+                             grid_size=g_size, spline_order=s_order))
+    else:
+        model.append(nn.Conv3d(in_ch, out_ch, kernel_size=3, stride=1, padding=1))
+        model.append(nn.LeakyReLU())
+
 def get_model(device, isConvKAN: bool, version="standard"):
     model = nn.Sequential()
     
+    is3d_dataset = False
     # --- PARAMETER BUDGETING (TRUE PARITY TUNING) ---
     if version == "nano":
         if isConvKAN:
@@ -90,7 +110,7 @@ def get_model(device, isConvKAN: bool, version="standard"):
     elif version == "simple":
         channels = [3, 16, 32, 32, 64]
     elif version == "nodulemnist3d":
-        
+        is3d_dataset = True
         if isConvKAN:
             channels = [1, 2, 4, 4, 4] 
         else:
@@ -99,41 +119,58 @@ def get_model(device, isConvKAN: bool, version="standard"):
         channels = [3, 32, 64, 128, 256]
         
     current_in = channels[0]
-    for out_ch in channels[1:]:
-        add_block(model, isConvKAN, current_in, out_ch, version=version)
-        model.append(nn.MaxPool2d(2))
-        current_in = out_ch
+    if not is3d_dataset:
+        for out_ch in channels[1:]:
+            add_block(model, isConvKAN, current_in, out_ch, version=version)
+            model.append(nn.MaxPool2d(2))
+            current_in = out_ch
 
-    # Decision Head Logic
-    if version in ["android", "pico", "nano"]:
+        # Decision Head Logic
+        if version in ["android", "pico", "nano"]:
+            if isConvKAN:
+                g = 2 if version in ["pico", "nano"] else 3
+                model.append(ConvKAN(channels[-1], 2, kernel_size=1, grid_size=g))
+                model.append(nn.AdaptiveAvgPool2d(1))
+                model.append(nn.Flatten())
+            else:
+                model.append(nn.AdaptiveAvgPool2d(1))
+                model.append(nn.Flatten())
+                model.append(nn.Linear(channels[-1], 2))
+        else:
+            model.append(nn.Flatten())
+            with torch.no_grad():
+                dummy_x = torch.zeros(1, channels[0], IMG_SIZE, IMG_SIZE)
+                backbone_output = model[:-1](dummy_x) 
+                flatten_size = backbone_output.numel()
+            
+            if isConvKAN:
+                model.append(nn.Unflatten(1, (channels[-1], 1, 1)))
+                model.append(ConvKAN(channels[-1], 2, kernel_size=1))
+                model.append(nn.AdaptiveAvgPool2d(1))
+                model.append(nn.Flatten())
+            else:
+                if version == "simple":
+                    model.append(nn.Linear(flatten_size, 2))
+                else:
+                    model.append(nn.Linear(flatten_size, 256))
+                    model.append(nn.LeakyReLU())
+                    model.append(nn.Linear(256, 2))
+    else:
+        for out_ch in channels[1:]:
+            add3d_block(model, isConvKAN, current_in, out_ch, version=version)
+            current_in = out_ch
+        
+        # Final output layer
         if isConvKAN:
-            g = 2 if version in ["pico", "nano"] else 3
-            model.append(ConvKAN(channels[-1], 2, kernel_size=1, grid_size=g))
-            model.append(nn.AdaptiveAvgPool2d(1))
+            model.append(effConvKAN3D(channels[-1], 2, kernel_size=1, grid_size=2))
+            model.append(nn.AdaptiveAvgPool3d(1))
             model.append(nn.Flatten())
         else:
-            model.append(nn.AdaptiveAvgPool2d(1))
+            model.append(nn.AdaptiveAvgPool3d(1))
             model.append(nn.Flatten())
             model.append(nn.Linear(channels[-1], 2))
-    else:
-        model.append(nn.Flatten())
-        with torch.no_grad():
-            dummy_x = torch.zeros(1, channels[0], IMG_SIZE, IMG_SIZE)
-            backbone_output = model[:-1](dummy_x) 
-            flatten_size = backbone_output.numel()
         
-        if isConvKAN:
-            model.append(nn.Unflatten(1, (channels[-1], 1, 1)))
-            model.append(ConvKAN(channels[-1], 2, kernel_size=1))
-            model.append(nn.AdaptiveAvgPool2d(1))
-            model.append(nn.Flatten())
-        else:
-            if version == "simple":
-                model.append(nn.Linear(flatten_size, 2))
-            else:
-                model.append(nn.Linear(flatten_size, 256))
-                model.append(nn.LeakyReLU())
-                model.append(nn.Linear(256, 2))
+
 
     return model.to(device)
 

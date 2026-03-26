@@ -5,12 +5,14 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
+from torchsummary import summary
 import medmnist
 import copy
 from medmnist import INFO, Evaluator
 from common import (MODELS_ROOT, get_model, get_data_split, ensure_parent_dir)
 import os
 import numpy as np
+import tensorflow as tf
 
 def train_model(model_name: str, version: str):
     isConvKAN = True
@@ -21,10 +23,14 @@ def train_model(model_name: str, version: str):
     else:
         print("Invalid model name, exiting")
         return
+    print("Getting model...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = get_model(device, isConvKAN, version)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
+    print(model)
+    #summary(model, (1, 28, 28, 28))
+    
 
     MODEL_PATH = os.path.join(MODELS_ROOT, "", "malaria_{model_name}_{VERSION}.pth")
     DATASET_PATH = os.path.join(os.getcwd(), "medmnist", version)
@@ -35,27 +41,15 @@ def train_model(model_name: str, version: str):
     PATIENCE = 5
     BATCH_SIZE = 128
 
-    info = INFO[version]
-    task = info['task']
-    n_channels = info['n_channels']
-    n_classes = len(info['label'])
-
-    DataClass = getattr(medmnist, info['python_class'])
-
-    # preprocessing
-    data_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[.5], std=[.5])
-    ])
+    DataClass = getattr(medmnist, INFO[version]['python_class'])
 
     # load the data
     print("Downloading dataset")
-    train_dataset = DataClass(split='train', transform=data_transform, download=True, root=DATASET_PATH)
-    test_dataset = DataClass(split='test', transform=data_transform, download=True, root=DATASET_PATH)
+    train_dataset = DataClass(split='train',  download=True, root=DATASET_PATH)
+    test_dataset = DataClass(split='test',  download=True, root=DATASET_PATH)
 
     train_loader = data.DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     test_loader = data.DataLoader(dataset=test_dataset, batch_size=2*BATCH_SIZE, shuffle=False)
-    print(train_dataset)
     
     print(f"Starting Training for {model_name} with version {version}")
     for epoch in range(MAX_EPOCHS):
@@ -64,8 +58,8 @@ def train_model(model_name: str, version: str):
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}")
         for x, y in pbar:
             x, y = x.to(device), y.to(device)
-            optimizer.zero_grad(); 
-            
+            optimizer.zero_grad();
+
             y_hat = model(x); 
             loss = criterion(y_hat, y)
             
@@ -97,4 +91,4 @@ def train_model(model_name: str, version: str):
 
 
 
-train_model("cnn", "nodulemnist3d")    
+train_model("convkan", "nodulemnist3d")    
