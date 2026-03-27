@@ -1,19 +1,14 @@
 from tqdm import tqdm
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.utils.data as data
-import torchvision.transforms as transforms
-from torchsummary import summary
 import medmnist
 import copy
-from medmnist import INFO, Evaluator
+from medmnist import INFO
 from common import (MODELS_ROOT, get_model, get_data_split, ensure_parent_dir)
 import os
-import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
+import sys
 
 def train_model(model_name: str, version: str):
     isConvKAN = True
@@ -24,13 +19,11 @@ def train_model(model_name: str, version: str):
     else:
         print("Invalid model name, exiting")
         return
-    print("Getting model...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = get_model(device, isConvKAN, version)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
     print(model)
-    #summary(model, (1, 28, 28, 28))
     
     MODEL_DIRECTORY = os.path.join(MODELS_ROOT, "mednist")
     if(not os.path.exists(MODEL_DIRECTORY)): 
@@ -38,12 +31,12 @@ def train_model(model_name: str, version: str):
     MODEL_PATH = os.path.join(MODEL_DIRECTORY, f'medmnist_{model_name}_{version}.pth')
     GRAPH_PATH = os.path.join(MODEL_DIRECTORY, f'medmnist_{model_name}_{version}_metrics.png')
     DATASET_PATH = os.path.join(os.getcwd(), "medmnist", version)
-    print(DATASET_PATH)
+    print(f'Dataset path: {DATASET_PATH}')
     os.makedirs(DATASET_PATH, exist_ok=True)
 
     MAX_EPOCHS = 100
     PATIENCE = 5
-    BATCH_SIZE = 128
+    BATCH_SIZE = 20
 
     DataClass = getattr(medmnist, INFO[version]['python_class'])
 
@@ -53,8 +46,7 @@ def train_model(model_name: str, version: str):
     test_dataset = DataClass(split='test',  download=True, root=DATASET_PATH)
 
     train_loader = data.DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    test_loader = data.DataLoader(dataset=test_dataset, batch_size=2*BATCH_SIZE, shuffle=False)
-    print(type(train_loader.dataset))
+    test_loader = data.DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
     
     print(f"Starting Training for {model_name} with version {version}")
     best_acc, epochs_no_improve = 0.0, 0
@@ -107,5 +99,10 @@ def train_model(model_name: str, version: str):
     plt.savefig(GRAPH_PATH); plt.close()
 
 
-
-train_model("cnn", "nodulemnist3d")    
+if len(sys.argv) == 1:
+    train_model("cnn", "nodulemnist3d")    
+    train_model("convkan", "nodulemnist3d")
+elif len(sys.argv) == 2:
+    train_model(sys.argv[1], "nodulemnist3d")
+else:
+    train_model(sys.argv[1], sys.argv[2])
