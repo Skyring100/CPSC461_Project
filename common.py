@@ -158,6 +158,7 @@ def get_model(device, isConvKAN: bool, version="standard"):
     else:
         for out_ch in channels[1:]:
             add3d_block(model, isConvKAN, current_in, out_ch, version=version)
+            model.append(nn.MaxPool3d(2))
             current_in = out_ch
         
         # Final output layer

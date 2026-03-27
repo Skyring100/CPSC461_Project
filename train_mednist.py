@@ -12,6 +12,7 @@ from medmnist import INFO, Evaluator
 from common import (MODELS_ROOT, get_model, get_data_split, ensure_parent_dir)
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 import tensorflow as tf
 
 def train_model(model_name: str, version: str):
@@ -31,8 +32,11 @@ def train_model(model_name: str, version: str):
     print(model)
     #summary(model, (1, 28, 28, 28))
     
-
-    MODEL_PATH = os.path.join(MODELS_ROOT, "", "malaria_{model_name}_{VERSION}.pth")
+    MODEL_DIRECTORY = os.path.join(MODELS_ROOT, "mednist")
+    if(not os.path.exists(MODEL_DIRECTORY)): 
+        os.makedirs(MODEL_DIRECTORY)
+    MODEL_PATH = os.path.join(MODEL_DIRECTORY, f'medmnist_{model_name}_{version}.pth')
+    GRAPH_PATH = os.path.join(MODEL_DIRECTORY, f'medmnist_{model_name}_{version}_metrics.png')
     DATASET_PATH = os.path.join(os.getcwd(), "medmnist", version)
     print(DATASET_PATH)
     os.makedirs(DATASET_PATH, exist_ok=True)
@@ -50,14 +54,19 @@ def train_model(model_name: str, version: str):
 
     train_loader = data.DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     test_loader = data.DataLoader(dataset=test_dataset, batch_size=2*BATCH_SIZE, shuffle=False)
+    print(type(train_loader.dataset))
     
     print(f"Starting Training for {model_name} with version {version}")
+    best_acc, epochs_no_improve = 0.0, 0
+    history = {"train_loss": [], "val_acc": []}
     for epoch in range(MAX_EPOCHS):
         model.train()
         running_loss = 0.0
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}")
         for x, y in pbar:
-            x, y = x.to(device), y.to(device)
+            # Since Mednist tensor was stored as a torch.double, we need to cast for out model
+            # Mednist output label tensors are set to use mutliclasses, so we must squeeze them into 1D
+            x, y = x.float().to(device), y.squeeze().long().to(device)
             optimizer.zero_grad();
 
             y_hat = model(x); 
@@ -67,16 +76,18 @@ def train_model(model_name: str, version: str):
             running_loss += loss.item()
         
         epoch_loss = running_loss / len(train_loader)
+        history["train_loss"].append(epoch_loss)
 
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
             for x, y in test_loader:
-                x, y = x.to(device), y.to(device)
+                x, y = x.float().to(device), y.squeeze().long().to(device)
                 y_hat = model(x); _, predicted = torch.max(y_hat, 1)
                 total += y.size(0); correct += (predicted == y).sum().item()
         
         acc = 100 * correct / total
+        history["val_acc"].append(acc)
         print(f"Epoch {epoch+1} | Loss: {epoch_loss:.4f} | Acc: {acc:.2f}%")
         if acc > best_acc:
             best_acc = acc
@@ -89,6 +100,12 @@ def train_model(model_name: str, version: str):
     model.load_state_dict(best_model_wts)
     torch.save(model.state_dict(), MODEL_PATH)
 
+    #Plotting
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+    ax1.plot(history["val_acc"], color='green', marker='o'); ax1.set_title("Validation Accuracy (%)")
+    ax2.plot(history["train_loss"], color='orange'); ax2.set_title("Training Loss")
+    plt.savefig(GRAPH_PATH); plt.close()
 
 
-train_model("convkan", "nodulemnist3d")    
+
+train_model("cnn", "nodulemnist3d")    
