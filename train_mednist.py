@@ -5,7 +5,7 @@ import torch.utils.data as data
 import medmnist
 import copy
 from medmnist import INFO
-from common import (MODELS_ROOT, get_model, get_data_split, ensure_parent_dir)
+from common import (MODELS_ROOT, get_model, count_parameters)
 import os
 import matplotlib.pyplot as plt
 import sys
@@ -24,6 +24,7 @@ def train_model(model_name: str, version: str):
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
     print(model)
+    print(count_parameters(model))
     
     MODEL_DIRECTORY = os.path.join(MODELS_ROOT, "mednist")
     if(not os.path.exists(MODEL_DIRECTORY)): 

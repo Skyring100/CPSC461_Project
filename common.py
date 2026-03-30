@@ -112,9 +112,11 @@ def get_model(device, isConvKAN: bool, version="standard"):
     elif version == "nodulemnist3d":
         is3d_dataset = True
         if isConvKAN:
-            channels = [1, 2, 4, 4, 4] 
+            # 92024 parameters
+            channels = [1, 4, 4, 16, 16] 
         else:
-            channels = [1, 4, 8, 10, 12]
+            # 97474 parmaters 
+            channels = [1, 16, 32, 32, 64]
     else:
         channels = [3, 32, 64, 128, 256]
         
