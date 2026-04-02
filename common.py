@@ -82,6 +82,9 @@ def add3d_block(model, isConvKAN, in_ch, out_ch, version="standard"):
             g_size, s_order = 2, 2
         elif version == "android":
             g_size, s_order = 3, 2
+        elif version == "nodulemnist3d":
+            # Reduced for 5070 VRAM - grid_size 6, spline_order 3 for memory efficiency
+            g_size, s_order = 6, 3
         else:
             g_size, s_order = 5, 3
             
@@ -112,11 +115,11 @@ def get_model(device, isConvKAN: bool, version="standard"):
     elif version == "nodulemnist3d":
         is3d_dataset = True
         if isConvKAN:
-            # 92024 parameters
-            channels = [1, 4, 4, 16, 16] 
+            # ConvKAN for 5070 - reduced channels and moderate grid/spline for memory efficiency
+            channels = [1, 16, 32, 64, 128]
         else:
-            # 97474 parmaters 
-            channels = [1, 16, 32, 32, 64]
+            # Balanced CNN for 5070 - 4 stages of pooling for 3D input size
+            channels = [1, 64, 128, 256, 512]
     else:
         channels = [3, 32, 64, 128, 256]
         
@@ -165,13 +168,20 @@ def get_model(device, isConvKAN: bool, version="standard"):
         
         # Final output layer
         if isConvKAN:
-            model.append(effConvKAN3D(channels[-1], 2, kernel_size=1, grid_size=2))
-            model.append(nn.AdaptiveAvgPool3d(1))
+            # ConvKAN head with modest parameters for VRAM efficiency
+            model.append(effConvKAN3D(channels[-1], 128, kernel_size=1, grid_size=6, spline_order=3))
             model.append(nn.Flatten())
+            model.append(nn.Linear(128, 64))
+            model.append(nn.LeakyReLU())
+            model.append(nn.Linear(64, 2))
         else:
             model.append(nn.AdaptiveAvgPool3d(1))
             model.append(nn.Flatten())
-            model.append(nn.Linear(channels[-1], 2))
+            model.append(nn.Linear(channels[-1], 256))
+            model.append(nn.LeakyReLU())
+            model.append(nn.Linear(256, 128))
+            model.append(nn.LeakyReLU())
+            model.append(nn.Linear(128, 2))
         
 
 
