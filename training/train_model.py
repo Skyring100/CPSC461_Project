@@ -5,8 +5,8 @@ import numpy as np
 import psutil
 import torch
 import torch.nn as nn
-from typing import Callable
 
+from typing import Callable
 from .engine import train_one_epoch, validate
 from .evaluator import print_final_report, run_final_evaluation
 from models import count_parameters
