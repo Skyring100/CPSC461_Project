@@ -20,14 +20,14 @@ def run_training(version=None, model_name=None):
         print("Running all models on all datasets")
         
         try:
-            run_malaria_training()
+            run_malaria_training(None, None)
         except Exception as e:
             print(f"Error during Malaria training: {e}")
 
         print("\n" + "="*20)
 
         try:
-            run_medmnist_training()
+            run_medmnist_training(None, None)
         except Exception as e:
             print(f"Error during MedMNIST training: {e}")
 
