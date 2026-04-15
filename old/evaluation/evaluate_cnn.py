@@ -1,5 +1,5 @@
 from common import get_cnn_model, CNN_SAVE_PATH
-from evaluate_model import evaluate_model
+from evaluation.evaluate_model import evaluate_model
 
 model_func = get_cnn_model
 save_path = CNN_SAVE_PATH

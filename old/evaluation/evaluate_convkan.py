@@ -1,5 +1,5 @@
 from common import get_convkan_model, CONVKAN_SAVE_PATH
-from evaluate_model import evaluate_model
+from evaluation.evaluate_model import evaluate_model
 
 model_func = get_convkan_model
 save_path = CONVKAN_SAVE_PATH

@@ -1,4 +1,4 @@
-from common import get_model
+from data import get_model
 import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
