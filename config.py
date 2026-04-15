@@ -1,6 +1,3 @@
-import os
-
-# --- IMAGE / TRAINING DEFAULTS ---
 IMG_SIZE = 48
 BATCH_SIZE = 16
 MODELS_ROOT = "models"
