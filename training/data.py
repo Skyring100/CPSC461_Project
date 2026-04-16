@@ -117,6 +117,7 @@ def get_medmnist_loaders(batch_size):
 def prepare_malaria_root() -> str:
     data_path = kagglehub.dataset_download(MALARIA_DATASETS[0])
 
+    # Find the root directory containing the dataset
     target_root = None
     for root, dirs, _ in os.walk(data_path):
         if "Uninfected" in dirs and "Parasitized" in dirs:

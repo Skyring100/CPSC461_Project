@@ -5,5 +5,4 @@ MODELS_ROOT = "models"
 
 MALARIA_DATASETS = [
     "iarunava/cell-images-for-detecting-malaria",
-    "nipunarora8/malaria-detection-dataset",
 ]

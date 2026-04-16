@@ -8,6 +8,7 @@ def run_final_evaluation(model, loader, device) -> dict:
     model.eval()
     all_preds, all_labels = [], []
 
+    # No gradient calculations needed for evaluation
     with torch.no_grad():
         for x, y in loader:
             x, y = x.float().to(device), y.view(-1).long().to(device)
@@ -15,9 +16,11 @@ def run_final_evaluation(model, loader, device) -> dict:
             all_preds.extend(predicted.cpu().numpy())
             all_labels.extend(y.cpu().numpy())
 
+    # Convert to numpy arrays
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
 
+    # Calculate metrics
     cm = confusion_matrix(all_labels, all_preds)
     precision, recall, f1, _ = precision_recall_fscore_support(
         all_labels, all_preds, average="weighted"

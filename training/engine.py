@@ -7,6 +7,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device, process):
     model.train()
     running_loss = 0.0
 
+    # Iterate over the training data
     for x, y in tqdm(loader, desc="Training", leave=False):
         x, y = x.float().to(device), y.view(-1).long().to(device)
         optimizer.zero_grad()
