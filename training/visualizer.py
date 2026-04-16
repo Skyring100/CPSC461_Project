@@ -66,8 +66,7 @@ def save_comparison_plot(training_results: dict, version: str, save_path: str, t
 # Private helpers
 
 def _bar_chart(ax, models_list, values, colors, ylabel, title, fmt, ylim=None):
-    bars = ax.bar(models_list, values, color=colors, alpha=0.8,
-                  edgecolor="black", linewidth=2)
+    bars = ax.bar(models_list, values, color=colors, alpha=0.8, edgecolor="black", linewidth=2)
     ax.set_ylabel(ylabel, fontsize=11, fontweight="bold")
     ax.set_title(title, fontsize=12, fontweight="bold")
     if ylim:
@@ -101,10 +100,12 @@ def _metrics_table(ax, stats):
     table.set_fontsize(11)
     table.scale(1, 2.5)
 
+    # Style the table
     for col in range(len(headers)):
         table[(0, col)].set_facecolor("#34495e")
         table[(0, col)].set_text_props(weight="bold", color="white")
 
+    # Style the rows
     for row in range(1, len(rows) + 1):
         for col in range(len(headers)):
             table[(row, col)].set_facecolor("#ecf0f1" if row % 2 == 0 else "#ffffff")
@@ -119,6 +120,8 @@ def _confusion_matrix_plot(ax, cm, model_name: str):
     ax.set_xlabel("Predicted", fontsize=11, fontweight="bold")
     ax.set_ylabel("True", fontsize=11, fontweight="bold")
     ax.set_title(f"Confusion Matrix – {model_name.upper()}", fontsize=12, fontweight="bold")
+
+    # Add the values to the confusion matrix
     for i in range(2):
         for j in range(2):
             ax.text(j, i, cm[i, j], ha="center", va="center",

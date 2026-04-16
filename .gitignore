@@ -2,8 +2,6 @@
 .env
 malaria_dataset/
 medmnist/
-models/
 
 __pycache__/
 *.pyc
-*.pth

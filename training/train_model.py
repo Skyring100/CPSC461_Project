@@ -43,22 +43,27 @@ def train_model(
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
 
+    # History & Best Model
     history, peak_ram, peak_vram = make_history(), get_initial_ram(), get_initial_vram()
     best_acc, epochs_no_improve = 0.0, 0
     best_model_wts = None
 
+    # Process is needed for resource tracking
     process = psutil.Process(os.getpid())
     start_time = time.time()
 
-    print(f"\nStarting {version.upper()} {model_name} Training...")
+    print(f"Training {version.upper()} {model_name}...")
+    print(model)
 
     for epoch in range(MAX_EPOCHS):
+        # Training
         epoch_start = time.time()
         loss, p_ram, p_vram = train_one_epoch(model, train_loader, optimizer, criterion, device, process)
 
         peak_ram = max(peak_ram, p_ram)
         peak_vram = max(peak_vram, p_vram)
 
+        # Validation
         acc = validate(model, val_loader, device)
         history["train_loss"].append(loss)
         history["val_acc"].append(acc)
@@ -66,6 +71,7 @@ def train_model(
         
         print(f"Epoch {epoch + 1} | Loss: {loss:.4f} | Acc: {acc:.2f}%")
 
+        # Early Stopping
         if acc > best_acc:
             best_acc = acc
             best_model_wts = copy.deepcopy(model.state_dict())
