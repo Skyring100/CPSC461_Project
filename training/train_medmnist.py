@@ -6,7 +6,8 @@ from utils import get_comparison_chart_path
 from .train_model import train_model
 from .data import get_medmnist_loaders
 
-VERSIONS = ["nodulemnist3d", "nodulemnist3d_light"]
+VERSIONS = ["nodulemnist3d_light", "nodulemnist3d"]
+TITLES = ["NoduleMNIST Light", "NoduleMNIST Bulky"]
 MODELS = ["cnn", "convkan"]
 
 def medmnist_loader_builder(batch_size):
@@ -27,7 +28,7 @@ def run_medmnist_training(version, model_name):
 
         if "cnn" in version_stats and "convkan" in version_stats:
             chart_path = get_comparison_chart_path(v)
-            save_comparison_plot(version_stats, v, chart_path)
+            save_comparison_plot(version_stats, v, chart_path, TITLES[v_list.index(v)])
 
 
 if __name__ == "__main__":

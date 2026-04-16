@@ -38,7 +38,7 @@ def train_model(
 
     # Initialize Model & Loaders
     model = model_builder(device, version, model_name)
-    train_loader, test_loader = loader_builder(batch_size)
+    train_loader, val_loader, test_loader = loader_builder(batch_size)
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
@@ -59,7 +59,7 @@ def train_model(
         peak_ram = max(peak_ram, p_ram)
         peak_vram = max(peak_vram, p_vram)
 
-        acc = validate(model, test_loader, device)
+        acc = validate(model, val_loader, device)
         history["train_loss"].append(loss)
         history["val_acc"].append(acc)
         history["epoch_times"].append(time.time() - epoch_start)

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from utils import ensure_parent_dir
 
 
-def save_comparison_plot(training_results: dict, version: str, save_path: str):
+def save_comparison_plot(training_results: dict, version: str, save_path: str, title: str):
     """Saves a comparison figure for CNN vs ConvKAN on a MedMNIST version"""
     if not ("cnn" in training_results and "convkan" in training_results):
         return
@@ -55,9 +55,7 @@ def save_comparison_plot(training_results: dict, version: str, save_path: str):
                xlabel="Epoch", ylabel="Accuracy (%)", title="Accuracy Curves",
                label_fmt="{} Acc")
 
-    fig.suptitle(f"NoduleMNIST Training Comparison: {version}",
-                 fontsize=16, fontweight="bold", y=0.995)
-
+    fig.suptitle(title, fontsize=16, fontweight="bold", y=0.995)
     ensure_parent_dir(save_path)
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()

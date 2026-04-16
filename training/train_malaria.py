@@ -7,6 +7,7 @@ from .train_model import train_model
 from .data import get_malaria_loaders
 
 VERSIONS = ["nano", "standard"]
+TITLES = ["Malaria Light", "Malaria Bulky"]
 MODELS = ["cnn", "convkan"]
 
 def malaria_loader_builder(batch_size):
@@ -27,7 +28,7 @@ def run_malaria_training(version, model_name):
 
         if "cnn" in version_stats and "convkan" in version_stats:
             chart_path = get_comparison_chart_path(v)
-            save_comparison_plot(version_stats, v, chart_path)
+            save_comparison_plot(version_stats, v, chart_path, TITLES[v_list.index(v)])
 
 
 if __name__ == "__main__":

@@ -54,26 +54,26 @@ def get_malaria_loaders(batch_size):
     root = prepare_malaria_root()
     full_dataset = datasets.ImageFolder(root=root)
     
-    total_size = len(full_dataset)
-    test_size = int(0.1 * total_size)
-    train_val_size = total_size - test_size
+    # 72% Train, 18% Val, 10% Test
+    total_len = len(full_dataset)
+    train_size = int(0.72 * total_len)
+    val_size = int(0.18 * total_len)
+    test_size = total_len - train_size - val_size
     
     torch.manual_seed(42)
-    train_val_set, test_set = random_split(full_dataset, [train_val_size, test_size])
+    train_subset, val_subset, test_subset = random_split(
+        full_dataset, [train_size, val_size, test_size]
+    )
 
-    print(train_val_set)
-    print(test_set)
-    
-    train_size = int(0.8 * train_val_size)
-    val_size = train_val_size - train_size
-    train_subset, val_subset = random_split(train_val_set, [train_size, val_size])
-
-    # Apply transforms
     train_ds = AugmentedDataset(train_subset, get_2d_transforms())
-    val_ds = AugmentedDataset(val_subset, get_2d_transforms())
+    val_ds = AugmentedDataset(val_subset, get_2d_val_transforms())
+    test_ds = AugmentedDataset(test_subset, get_2d_val_transforms())
     
-    return DataLoader(train_ds, batch_size=batch_size, shuffle=True), \
-           DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+    return (
+        DataLoader(train_ds, batch_size=batch_size, shuffle=True),
+        DataLoader(val_ds, batch_size=batch_size, shuffle=False),
+        DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+    )
 
 
 
@@ -92,7 +92,6 @@ def get_3d_transforms():
 
 def get_3d_val_transforms():
     return transforms.Compose([
-        # Convert to FloatTensor (C, D, H, W)
         transforms.Lambda(lambda x: torch.from_numpy(x).float()),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
@@ -102,10 +101,12 @@ def get_medmnist_loaders(batch_size):
     
     root = prepare_medmnist_root()
     
-    train_ds = DataClass(split="train", transform=get_3d_transforms(), download=True, root=root)
-    test_ds = DataClass(split="test", transform=get_3d_transforms(), download=True, root=root)
-    
+    train_ds = DataClass(split="train", download=True, transform=get_3d_transforms(), root=root)
+    val_ds = DataClass(split="val", download=True, transform=get_3d_val_transforms(), root=root)
+    test_ds = DataClass(split="test", download=True, transform=get_3d_val_transforms(), root=root)
+
     return DataLoader(train_ds, batch_size=batch_size, shuffle=True), \
+           DataLoader(val_ds, batch_size=batch_size, shuffle=False), \
            DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 
 
