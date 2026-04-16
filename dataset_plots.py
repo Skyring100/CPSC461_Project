@@ -1,9 +1,7 @@
 import os
 from torch.utils.data import DataLoader
-from data import prepare_dataset_root, get_data_split
+from training.data import prepare_dataset_root, get_data_split
 import medmnist
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 def get_malaria_dataloader():

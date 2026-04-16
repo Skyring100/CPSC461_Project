@@ -1,25 +1,19 @@
 import sys
-import os
-import medmnist 
 
-from medmnist import INFO
-from models import get_model
+from .models import get_model
 from .visualizer import save_comparison_plot
 from utils import get_comparison_chart_path
 from .train_model import train_model
-from torch.utils.data import DataLoader
+from .data import get_medmnist_loaders
 
 VERSIONS = ["nodulemnist3d", "nodulemnist3d_light"]
 MODELS = ["cnn", "convkan"]
 
-def medmnist_loader_builder(version, batch_size):
-    DataClass = getattr(medmnist, INFO["nodulemnist3d"]["python_class"])
-    root = os.path.join(os.getcwd(), "medmnist", version)
-    return DataLoader(DataClass(split="train", download=True, root=root), batch_size=batch_size, shuffle=True), \
-           DataLoader(DataClass(split="test", download=True, root=root), batch_size=batch_size, shuffle=False)
+def medmnist_loader_builder(batch_size):
+    return get_medmnist_loaders(batch_size)
 
 def medmnist_model_builder(device, version, model_name):
-    return get_model(device, isConvKAN=(model_name == "convkan"), version=version)
+    return get_model(device, isConvKAN=(model_name == "convkan"), version=version, is3d=True)
 
 def run_medmnist_training(version, model_name):
     """Run MedMNIST training for the given model/version (or all combinations)"""

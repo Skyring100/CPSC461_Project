@@ -1,23 +1,19 @@
 import sys
 
-from models import get_model
+from .models import get_model
 from .visualizer import save_comparison_plot
 from utils import get_comparison_chart_path
 from .train_model import train_model
-from data import get_data_split, prepare_dataset_root
-from torch.utils.data import DataLoader
+from .data import get_malaria_loaders
 
 VERSIONS = ["nano", "standard"]
 MODELS = ["cnn", "convkan"]
 
-def malaria_loader_builder(version, batch_size):
-    real_root = prepare_dataset_root()
-    train_ds, test_ds = get_data_split(real_root)
-    return DataLoader(train_ds, batch_size=batch_size, shuffle=True), \
-           DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+def malaria_loader_builder(batch_size):
+    return get_malaria_loaders(batch_size)
 
 def malaria_model_builder(device, version, model_name):
-    return get_model(device, isConvKAN=(model_name == "convkan"), version=version)
+    return get_model(device, isConvKAN=(model_name == "convkan"), version=version, is3d=False)
 
 def run_malaria_training(version, model_name):
     """Run malaria training for the given model/version (or all combinations)"""

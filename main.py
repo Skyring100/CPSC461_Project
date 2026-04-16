@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 from training.train_malaria import run_malaria_training
 from training.train_medmnist import run_medmnist_training
@@ -23,6 +24,7 @@ def run_training(version=None, model_name=None):
             run_malaria_training(None, None)
         except Exception as e:
             print(f"Error during Malaria training: {e}")
+            traceback.print_exc()
 
         print("\n" + "="*20)
 
@@ -30,6 +32,7 @@ def run_training(version=None, model_name=None):
             run_medmnist_training(None, None)
         except Exception as e:
             print(f"Error during MedMNIST training: {e}")
+            traceback.print_exc()
 
     # Malaria versions
     elif version in MALARIA_VERSIONS:
@@ -37,6 +40,7 @@ def run_training(version=None, model_name=None):
             run_malaria_training(version, model_name)
         except Exception as e:
             print(f"Error during Malaria training: {e}")
+            traceback.print_exc()
 
     # Medmnist versions
     elif version in MEDMNIST_VERSIONS:
@@ -44,6 +48,7 @@ def run_training(version=None, model_name=None):
             run_medmnist_training(version, model_name)
         except Exception as e:
             print(f"Error during MedMNIST training: {e}")
+            traceback.print_exc()
     
     else:
         print(f"Error: Unknown version '{version}'.")

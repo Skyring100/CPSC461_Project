@@ -7,9 +7,10 @@ import torch
 import torch.nn as nn
 
 from typing import Callable
+from config import MAX_EPOCHS
 from .engine import train_one_epoch, validate
 from .evaluator import print_final_report, run_final_evaluation
-from models import count_parameters
+from .models import count_parameters
 from utils import ensure_parent_dir, get_model_path, get_stats_path, get_training_plot_path
 from .trainer_utils import (
     reset_memory, cleanup, make_history, get_initial_ram, 
@@ -37,7 +38,7 @@ def train_model(
 
     # Initialize Model & Loaders
     model = model_builder(device, version, model_name)
-    train_loader, test_loader = loader_builder(version, batch_size)
+    train_loader, test_loader = loader_builder(batch_size)
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
@@ -51,7 +52,7 @@ def train_model(
 
     print(f"\nStarting {version.upper()} {model_name} Training...")
 
-    for epoch in range(100):
+    for epoch in range(MAX_EPOCHS):
         epoch_start = time.time()
         loss, p_ram, p_vram = train_one_epoch(model, train_loader, optimizer, criterion, device, process)
 

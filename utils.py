@@ -10,19 +10,19 @@ def ensure_parent_dir(file_path: str):
 
 
 def get_model_path(model_name: str, version: str) -> str:
-    return os.path.join(MODELS_ROOT, version, f"{model_name}_{version}.pth")
+    return os.path.join(MODELS_ROOT, version, f"{model_name}.pth")
 
 
 def get_stats_path(model_name: str, version: str) -> str:
-    return os.path.join(MODELS_ROOT, version, f"{model_name}_{version}_stats.json")
+    return os.path.join(MODELS_ROOT, version, f"{model_name}_stats.json")
 
 
 def get_comparison_chart_path(version: str) -> str:
-    return os.path.join("comparison", version, f"cnn_convkan_{version}_comparison.png")
+    return os.path.join(MODELS_ROOT, version, f"comparison.png")
 
 
 def get_training_plot_path(model_name: str, version: str) -> str:
-    return os.path.join("training_plots", version, f"{model_name}_{version}_stats.png")
+    return os.path.join(MODELS_ROOT, version, f"{model_name}_stats.png")
 
 
 def _save_stats(results: dict, path: str):
